@@ -27,6 +27,9 @@ No backend servers. No cloud storage.
 - **Save/Restore:** Instantly export your entire workspace to a JSON backup, or restore to start fresh anywhere.
 - **One-Click Wipe:** Dedicated "Clear Database" utility hidden safely in the Control Center.
 
+### ⚠️ Known Limitations
+- **Cellular & Corporate Firewalls:** The WebRTC `PeerJS` protocol requires open UDP ports to establish a secure peer-to-peer data channel. Strict corporate firewalls and some global Cellular Carriers explicitly block WebRTC IP gathering. **If your Live Sync hangs on 'Connecting...', move both devices to the same standard Wi-Fi network.**
+
 ## 🚀 Getting Started
 
 1. Go to the live PWA deployment.
