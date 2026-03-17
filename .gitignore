@@ -3,3 +3,4 @@ prod data/
 *.json
 !manifest.json
 .DS_Store
+node_modules/
