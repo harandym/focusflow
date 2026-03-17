@@ -995,7 +995,7 @@
                 // WebRTC Auto-Sync State
                 myPeerId: null,
                 targetPeerId: '',
-                peerConnection: null,
+                targetPeerId: '',
                 syncStatus: 'disconnected', // 'disconnected', 'connecting', 'connected'
                 syncRole: null, // 'host' or 'client'
                 peerMetadata: null,
@@ -1660,15 +1660,15 @@
                         alert("Sync connection error: " + err.type);
                         this.syncStatus = 'disconnected';
                     });
-                    this._peer = peer;
+                    window._peerServer = peer;
                 },
                 connectToPeer() {
                     if(!this.targetPeerId) return;
-                    if(!this._peer) {
+                    if(!window._peerServer) {
                         const peer = new Peer();
                         peer.on('open', (id) => {
                             this.myPeerId = id;
-                            this._peer = peer;
+                            window._peerServer = peer;
                             const conn = peer.connect(this.targetPeerId);
                             this.setupConnection(conn, 'client');
                         });
@@ -1678,13 +1678,13 @@
                             this.syncStatus = 'disconnected';
                         });
                     } else {
-                        const conn = this._peer.connect(this.targetPeerId);
+                        const conn = window._peerServer.connect(this.targetPeerId);
                         this.setupConnection(conn, 'client');
                     }
                     this.syncStatus = 'connecting';
                 },
                 setupConnection(conn, role) {
-                    this.peerConnection = conn;
+                    window._peerConn = conn;
                     this.syncRole = role;
                     this.syncStatus = 'connecting';
                     
@@ -1716,13 +1716,13 @@
                     
                     conn.on('close', () => {
                         this.syncStatus = 'disconnected';
-                        this.peerConnection = null;
+                        window._peerConn = null;
                         this.peerMetadata = null;
                         this.targetPeerId = '';
                     });
                 },
                 sendMetadata() {
-                    if(!this.peerConnection) return;
+                    if(!window._peerConn) return;
                     const meta = {
                         taskCount: this.tasks.length,
                         noteCount: this.notes.length,
@@ -1732,28 +1732,28 @@
                             0
                         )
                     };
-                    this.peerConnection.send({ type: 'metadata', payload: meta });
+                    window._peerConn.send({ type: 'metadata', payload: meta });
                 },
                 sendDatabase(isInitiator = true) {
-                    if(!this.peerConnection) return;
+                    if(!window._peerConn) return;
                     const payload = {
                         tasks: JSON.parse(JSON.stringify(this.tasks)),
                         notes: JSON.parse(JSON.stringify(this.notes)),
                         deletedIds: this.deletedIds || [],
                         timerMode: this.timerMode
                     };
-                    this.peerConnection.send({ type: 'sync_data', payload, isInitiator });
+                    window._peerConn.send({ type: 'sync_data', payload, isInitiator });
                 },
                 disconnectPeer() {
-                    if(this.peerConnection) {
-                        this.peerConnection.close();
+                    if(window._peerConn) {
+                        window._peerConn.close();
                     }
-                    if(this._peer) {
-                        this._peer.destroy();
-                        this._peer = null;
+                    if(window._peerServer) {
+                        window._peerServer.destroy();
+                        window._peerServer = null;
                     }
                     this.syncStatus = 'disconnected';
-                    this.peerConnection = null;
+                    window._peerConn = null;
                     this.peerMetadata = null;
                     this.myPeerId = null;
                     this.targetPeerId = '';
