@@ -1682,19 +1682,19 @@
                         this.setupConnection(conn, 'client');
                     }
                     this.syncStatus = 'connecting';
-                    
-                    // Connection timeout handler
-                    setTimeout(() => {
-                        if (this.syncStatus === 'connecting') {
-                            alert("Sync connection timed out. Please ensure the Host tab is open and the ID is correct.");
-                            this.disconnectPeer();
-                        }
-                    }, 10000); // 10 seconds timeout
                 },
                 setupConnection(conn, role) {
                     this.peerConnection = conn;
                     this.syncRole = role;
                     this.syncStatus = 'connecting';
+                    
+                    // Connection timeout handler
+                    setTimeout(() => {
+                        if (this.syncStatus === 'connecting') {
+                            alert("Sync connection timed out. Please ensure both devices are ready.");
+                            this.disconnectPeer();
+                        }
+                    }, 10000); // 10 seconds timeout
                     
                     conn.on('open', () => {
                         this.syncStatus = 'connected';
