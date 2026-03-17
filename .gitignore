@@ -1,6 +1,5 @@
-# Ignore data files and backups
-prod data/
 temp/
+prod data/
 *.json
 !manifest.json
 .DS_Store
