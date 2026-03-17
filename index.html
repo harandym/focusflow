@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FocusFlow — Productivity Hub</title>
+    <title>FocusFlow</title>
     <meta name="description"
         content="Offline-first productivity hub with Kanban task management, time tracking, and notes." />
     <link rel="manifest" href="./manifest.json" />
@@ -13,7 +13,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FocusFlow">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f0f'/><text y='.9em' font-size='80' x='10'>🎯</text></svg>">
+    <link rel="apple-touch-icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f0f'/><text y='.9em' font-size='80' x='10'>🎯</text></svg>">
     <script src="./tailwind.min.js"></script>
     <script>
         tailwind.config = {
@@ -550,11 +551,11 @@
                     <div class="flex-1 flex flex-col overflow-hidden relative"
                         @dragover="if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0 && !$event.dataTransfer.types.includes('text/html')) { $event.preventDefault(); isDraggingTaskFile = true; }"
                         @dragleave="isDraggingTaskFile = false"
-                        @dragstart="window._isDraggingInternal = true; $event.dataTransfer.effectAllowed = 'copyMove'; window._draggedSpan = $event.target.closest('span.inline-attachment');" 
-                        @dragend="window._isDraggingInternal = false; window._draggedSpan = null;" 
+                        @dragstart="window._isDraggingInternal = true; $event.dataTransfer.effectAllowed = 'copyMove'; window._draggedSpan = $event.target.closest('span.inline-attachment');"
+                        @dragend="window._isDraggingInternal = false; window._draggedSpan = null;"
                         @drop="if(window._isDraggingInternal) { if(window._draggedSpan) { $event.preventDefault(); let dropRange = null; if (document.caretRangeFromPoint) dropRange = document.caretRangeFromPoint($event.clientX, $event.clientY); else if ($event.rangeParent) { dropRange = document.createRange(); dropRange.setStart($event.rangeParent, $event.rangeOffset); } if(dropRange) { const frag = document.createDocumentFragment(); frag.appendChild(document.createTextNode('\u200B')); frag.appendChild(window._draggedSpan); frag.appendChild(document.createTextNode('\u200B')); dropRange.insertNode(frag); dropRange.collapse(false); } const ce = $el; setTimeout(() => { ce.dispatchEvent(new Event('input', { bubbles: true })); ce.dispatchEvent(new Event('blur', { bubbles: true })); save(); }, 10); } } else if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0) { $event.preventDefault(); handleFileDrop($event, 'task', activeTask.id); }">
 
-                        
+
 
                         <div
                             class="flex items-center justify-between px-5 py-2.5 border-b border-surface-600 flex-shrink-0">
@@ -563,8 +564,7 @@
                                 :class="notesSaved ? 'opacity-100' : 'opacity-0'" id="notes-saved-indicator">✓
                                 Saved</span>
                         </div>
-                        <div id="task-notes-area" 
-                            contenteditable="true" 
+                        <div id="task-notes-area" contenteditable="true"
                             x-init="$watch('activeTaskId', () => { $el.innerHTML = activeTask ? (activeTask.notes || '').replace(/\n/g, '<br>') : ''; })"
                             x-effect="if(activeTask && document.activeElement !== $el) { $el.innerHTML = (activeTask.notes || '').replace(/\n/g, '<br>'); }"
                             @input="if(activeTask) { activeTask.notes = $el.innerHTML; onTaskNotesInput(); }"
@@ -574,100 +574,98 @@
                             class="empty:before:content-[attr(data-placeholder)] before:text-gray-500 flex-1 bg-transparent px-5 py-4 text-sm text-gray-300 leading-relaxed focus:outline-none overflow-y-auto"
                             style="white-space: pre-wrap;"
                             data-placeholder="Capture thoughts, links, subtasks… Or drag & drop files here!"></div>
-                        
-                        </div>
+
                     </div>
-
-
                 </div>
-            </template>
+
+
         </div>
+        </template>
+    </div>
 
-        <!-- ════════════════════════════════════════ RIGHT — GLOBAL NOTES -->
-        <div class="w-72 flex-shrink-0 flex flex-col bg-surface-800 overflow-hidden border-l border-surface-600">
+    <!-- ════════════════════════════════════════ RIGHT — GLOBAL NOTES -->
+    <div class="w-72 flex-shrink-0 flex flex-col bg-surface-800 overflow-hidden border-l border-surface-600">
 
-            <!-- VIEW 1: NOTE LIST -->
-            <div x-show="!activeNoteId" class="flex-1 flex flex-col overflow-hidden animate-fade-in">
-                <div class="flex items-center justify-between px-4 py-3 border-b border-surface-600 flex-shrink-0">
-                    <div class="flex items-center gap-2">
-                        <span class="text-accent text-xs">📝</span>
-                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Quick Notes</span>
-                    </div>
-                    <button @click="addNote()"
-                        class="text-xs bg-surface-700 hover:bg-surface-600 border border-surface-500 text-gray-300 px-2 py-1 rounded transition-colors shadow-sm">
-                        + New
-                    </button>
+        <!-- VIEW 1: NOTE LIST -->
+        <div x-show="!activeNoteId" class="flex-1 flex flex-col overflow-hidden animate-fade-in">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-surface-600 flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-accent text-xs">📝</span>
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Quick Notes</span>
                 </div>
-                <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-                    <template x-if="notes.length === 0">
-                        <div class="text-xs text-gray-600 text-center py-8 italic opacity-60">
-                            Empty pad.<br>Click "+ New" to start.
-                        </div>
-                    </template>
-                    <template x-for="note in notes" :key="note.id">
-                        <div @click="activeNoteId = note.id"
-                            class="bg-surface-700/50 hover:bg-surface-700 border border-surface-600 hover:border-surface-500 p-3 rounded-lg cursor-pointer group transition-all relative">
-                            <div class="font-semibold text-sm text-gray-200 mb-1 truncate pr-4"
-                                x-text="note.title || 'Untitled'"></div>
-                            <div class="text-xs text-gray-500 line-clamp-3 leading-relaxed"
-                                x-text="note.content ? note.content.substring(0, 100) : 'No content...'"></div>
-                            <div class="mt-2 text-[10px] text-gray-600 font-mono"
-                                x-text="toDateStr(new Date(note.updatedAt))"></div>
-
-                            <!-- Delete Button (List View) -->
-                            <button @click.stop="deleteNote(note.id)"
-                                class="absolute top-2 right-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1">
-                                🗑
-                            </button>
-                        </div>
-                    </template>
-                </div>
+                <button @click="addNote()"
+                    class="text-xs bg-surface-700 hover:bg-surface-600 border border-surface-500 text-gray-300 px-2 py-1 rounded transition-colors shadow-sm">
+                    + New
+                </button>
             </div>
-
-            <!-- VIEW 2: NOTE DETAIL (EDITOR) -->
-            <div x-show="activeNoteId" class="flex-1 flex flex-col overflow-hidden animate-slide-in relative"
-                @dragover="if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0 && !$event.dataTransfer.types.includes('text/html')) { $event.preventDefault(); isDraggingNoteFile = true; }"
-                @dragleave="isDraggingNoteFile = false"
-                @dragstart="window._isDraggingInternal = true; $event.dataTransfer.effectAllowed = 'copyMove'; window._draggedSpan = $event.target.closest('span.inline-attachment');" 
-                @dragend="window._isDraggingInternal = false; window._draggedSpan = null;" 
-                @drop="if(window._isDraggingInternal) { if(window._draggedSpan) { $event.preventDefault(); let dropRange = null; if (document.caretRangeFromPoint) dropRange = document.caretRangeFromPoint($event.clientX, $event.clientY); else if ($event.rangeParent) { dropRange = document.createRange(); dropRange.setStart($event.rangeParent, $event.rangeOffset); } if(dropRange) { const frag = document.createDocumentFragment(); frag.appendChild(document.createTextNode('\u200B')); frag.appendChild(window._draggedSpan); frag.appendChild(document.createTextNode('\u200B')); dropRange.insertNode(frag); dropRange.collapse(false); } const ce = $el; setTimeout(() => { ce.dispatchEvent(new Event('input', { bubbles: true })); ce.dispatchEvent(new Event('blur', { bubbles: true })); save(); }, 10); } } else if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0) { $event.preventDefault(); handleFileDrop($event, 'note', activeNoteId); }">
-
-                
-
-                <div
-                    class="flex items-center justify-between px-3 py-2 border-b border-surface-600 flex-shrink-0 bg-surface-800">
-                    <button @click="activeNoteId = null"
-                        class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-surface-700">
-                        ◀ Back
-                    </button>
-                    <button @click="deleteNote(activeNoteId)"
-                        class="text-xs text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
-                        title="Delete Note">
-                        🗑
-                    </button>
-                </div>
-                <div class="flex-1 flex flex-col overflow-hidden">
-                    <input type="text" id="note-title-input" x-model="activeNote.title" @input="save()"
-                        placeholder="Note Title"
-                        class="flex-shrink-0 bg-transparent px-4 pt-4 pb-2 text-base font-bold text-gray-100 placeholder-gray-600 focus:outline-none focus:border-b focus:border-surface-600 transition-colors">
-                    <div id="note-content-area"
-                        contenteditable="true"
-                        x-init="$watch('activeNoteId', () => { $el.innerHTML = activeNote ? (activeNote.content || '').replace(/\n/g, '<br>') : ''; })"
-                        x-effect="if(activeNote && document.activeElement !== $el) { $el.innerHTML = (activeNote.content || '').replace(/\n/g, '<br>'); }"
-                        @input="if(activeNote) { activeNote.content = $el.innerHTML; save(); }"
-                        @blur="save()"
-                        @keydown="if($event.key === 'Backspace') { const sel = window.getSelection(); if (sel.rangeCount > 0 && sel.getRangeAt(0).collapsed) { const r = sel.getRangeAt(0); let target = null; let brToRemove = null; const checkPrev = (prev) => { if (prev && prev.tagName === 'BR') { const prevPrev = prev.previousSibling; if (prevPrev && prevPrev.nodeType === 1 && prevPrev.classList && prevPrev.classList.contains('inline-attachment')) { brToRemove = prev; return prevPrev; } } if (prev && prev.nodeType === 1 && prev.classList && prev.classList.contains('inline-attachment')) { return prev; } return null; }; if (r.startContainer.nodeType === 1) { const prev = r.startContainer.childNodes[r.startOffset - 1]; target = checkPrev(prev); } else if (r.startContainer.nodeType === 3 && r.startOffset === 0) { const prev = r.startContainer.previousSibling; target = checkPrev(prev); } if (target) { $event.preventDefault(); if (brToRemove) brToRemove.remove(); const next = target.nextSibling; if (next && next.tagName === 'BR') next.remove(); target.remove(); $el.dispatchEvent(new Event('input', { bubbles: true })); save(); } } }"
-                        @dblclick="if($event.target.tagName === 'IMG') { const span = $event.target.closest('span.inline-attachment'); openLightbox('image/png', $event.target.src, 'Image', span ? span.id : null); } else if ($event.target.closest('a.attachment-file')) { const a = $event.target.closest('a.attachment-file'); const span = a.closest('span.inline-attachment'); openLightbox('file', a.href, a.download, span ? span.id : null); $event.preventDefault(); }"
-                        class="empty:before:content-[attr(data-placeholder)] before:text-gray-500 flex-1 bg-transparent px-4 py-2 text-sm text-gray-300 leading-relaxed focus:outline-none overflow-y-auto"
-                        style="white-space: pre-wrap;"
-                        data-placeholder="Type something... Or drag & drop files here!"></div>
-                    
+            <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+                <template x-if="notes.length === 0">
+                    <div class="text-xs text-gray-600 text-center py-8 italic opacity-60">
+                        Empty pad.<br>Click "+ New" to start.
                     </div>
+                </template>
+                <template x-for="note in notes" :key="note.id">
+                    <div @click="activeNoteId = note.id"
+                        class="bg-surface-700/50 hover:bg-surface-700 border border-surface-600 hover:border-surface-500 p-3 rounded-lg cursor-pointer group transition-all relative">
+                        <div class="font-semibold text-sm text-gray-200 mb-1 truncate pr-4"
+                            x-text="note.title || 'Untitled'"></div>
+                        <div class="text-xs text-gray-500 line-clamp-3 leading-relaxed"
+                            x-text="note.content ? note.content.substring(0, 100) : 'No content...'"></div>
+                        <div class="mt-2 text-[10px] text-gray-600 font-mono"
+                            x-text="toDateStr(new Date(note.updatedAt))"></div>
+
+                        <!-- Delete Button (List View) -->
+                        <button @click.stop="deleteNote(note.id)"
+                            class="absolute top-2 right-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1">
+                            🗑
+                        </button>
+                    </div>
+                </template>
             </div>
-
         </div>
 
+        <!-- VIEW 2: NOTE DETAIL (EDITOR) -->
+        <div x-show="activeNoteId" class="flex-1 flex flex-col overflow-hidden animate-slide-in relative"
+            @dragover="if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0 && !$event.dataTransfer.types.includes('text/html')) { $event.preventDefault(); isDraggingNoteFile = true; }"
+            @dragleave="isDraggingNoteFile = false"
+            @dragstart="window._isDraggingInternal = true; $event.dataTransfer.effectAllowed = 'copyMove'; window._draggedSpan = $event.target.closest('span.inline-attachment');"
+            @dragend="window._isDraggingInternal = false; window._draggedSpan = null;"
+            @drop="if(window._isDraggingInternal) { if(window._draggedSpan) { $event.preventDefault(); let dropRange = null; if (document.caretRangeFromPoint) dropRange = document.caretRangeFromPoint($event.clientX, $event.clientY); else if ($event.rangeParent) { dropRange = document.createRange(); dropRange.setStart($event.rangeParent, $event.rangeOffset); } if(dropRange) { const frag = document.createDocumentFragment(); frag.appendChild(document.createTextNode('\u200B')); frag.appendChild(window._draggedSpan); frag.appendChild(document.createTextNode('\u200B')); dropRange.insertNode(frag); dropRange.collapse(false); } const ce = $el; setTimeout(() => { ce.dispatchEvent(new Event('input', { bubbles: true })); ce.dispatchEvent(new Event('blur', { bubbles: true })); save(); }, 10); } } else if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0) { $event.preventDefault(); handleFileDrop($event, 'note', activeNoteId); }">
+
+
+
+            <div
+                class="flex items-center justify-between px-3 py-2 border-b border-surface-600 flex-shrink-0 bg-surface-800">
+                <button @click="activeNoteId = null"
+                    class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-surface-700">
+                    ◀ Back
+                </button>
+                <button @click="deleteNote(activeNoteId)"
+                    class="text-xs text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
+                    title="Delete Note">
+                    🗑
+                </button>
+            </div>
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <input type="text" id="note-title-input" x-model="activeNote.title" @input="save()"
+                    placeholder="Note Title"
+                    class="flex-shrink-0 bg-transparent px-4 pt-4 pb-2 text-base font-bold text-gray-100 placeholder-gray-600 focus:outline-none focus:border-b focus:border-surface-600 transition-colors">
+                <div id="note-content-area" contenteditable="true"
+                    x-init="$watch('activeNoteId', () => { $el.innerHTML = activeNote ? (activeNote.content || '').replace(/\n/g, '<br>') : ''; })"
+                    x-effect="if(activeNote && document.activeElement !== $el) { $el.innerHTML = (activeNote.content || '').replace(/\n/g, '<br>'); }"
+                    @input="if(activeNote) { activeNote.content = $el.innerHTML; save(); }" @blur="save()"
+                    @keydown="if($event.key === 'Backspace') { const sel = window.getSelection(); if (sel.rangeCount > 0 && sel.getRangeAt(0).collapsed) { const r = sel.getRangeAt(0); let target = null; let brToRemove = null; const checkPrev = (prev) => { if (prev && prev.tagName === 'BR') { const prevPrev = prev.previousSibling; if (prevPrev && prevPrev.nodeType === 1 && prevPrev.classList && prevPrev.classList.contains('inline-attachment')) { brToRemove = prev; return prevPrev; } } if (prev && prev.nodeType === 1 && prev.classList && prev.classList.contains('inline-attachment')) { return prev; } return null; }; if (r.startContainer.nodeType === 1) { const prev = r.startContainer.childNodes[r.startOffset - 1]; target = checkPrev(prev); } else if (r.startContainer.nodeType === 3 && r.startOffset === 0) { const prev = r.startContainer.previousSibling; target = checkPrev(prev); } if (target) { $event.preventDefault(); if (brToRemove) brToRemove.remove(); const next = target.nextSibling; if (next && next.tagName === 'BR') next.remove(); target.remove(); $el.dispatchEvent(new Event('input', { bubbles: true })); save(); } } }"
+                    @dblclick="if($event.target.tagName === 'IMG') { const span = $event.target.closest('span.inline-attachment'); openLightbox('image/png', $event.target.src, 'Image', span ? span.id : null); } else if ($event.target.closest('a.attachment-file')) { const a = $event.target.closest('a.attachment-file'); const span = a.closest('span.inline-attachment'); openLightbox('file', a.href, a.download, span ? span.id : null); $event.preventDefault(); }"
+                    class="empty:before:content-[attr(data-placeholder)] before:text-gray-500 flex-1 bg-transparent px-4 py-2 text-sm text-gray-300 leading-relaxed focus:outline-none overflow-y-auto"
+                    style="white-space: pre-wrap;" data-placeholder="Type something... Or drag & drop files here!">
+                </div>
+
+            </div>
         </div>
+
+    </div>
+
+    </div>
 
     </div>
 
@@ -776,60 +774,77 @@
     <template x-if="lightboxOpen">
         <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-black/90 backdrop-blur-md animate-fade-in"
             @click.self="closeLightbox()">
-            <div class="relative max-w-5xl w-full max-h-full flex flex-col items-center justify-center animate-slide-in">
+            <div
+                class="relative max-w-5xl w-full max-h-full flex flex-col items-center justify-center animate-slide-in">
                 <!-- Close Button -->
-                <button @click="closeLightbox()" class="absolute -top-10 right-0 md:-right-10 btn text-gray-400 hover:text-white text-3xl font-light focus:outline-none">&times;</button>
-                
+                <button @click="closeLightbox()"
+                    class="absolute -top-10 right-0 md:-right-10 btn text-gray-400 hover:text-white text-3xl font-light focus:outline-none">&times;</button>
+
                 <!-- Content -->
-                <div class="bg-surface-800 rounded-xl overflow-hidden shadow-2xl border border-surface-600 flex flex-col items-center w-full max-h-full">
-                    
-                    <div class="w-full px-4 py-3 border-b border-surface-600 bg-surface-900 flex items-center justify-between flex-shrink-0">
+                <div
+                    class="bg-surface-800 rounded-xl overflow-hidden shadow-2xl border border-surface-600 flex flex-col items-center w-full max-h-full">
+
+                    <div
+                        class="w-full px-4 py-3 border-b border-surface-600 bg-surface-900 flex items-center justify-between flex-shrink-0">
                         <span class="text-sm font-semibold text-gray-200 truncate pr-4" x-text="lightboxName"></span>
                         <div class="flex items-center gap-2">
-                            <button x-show="lightboxTargetId" @click="deleteInlineAttachment()" class="text-xs bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1.5 rounded-lg font-bold shadow transition-colors flex items-center gap-1.5 border border-red-500/50 hover:border-red-500">
-                               🗑 Delete
+                            <button x-show="lightboxTargetId" @click="deleteInlineAttachment()"
+                                class="text-xs bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1.5 rounded-lg font-bold shadow transition-colors flex items-center gap-1.5 border border-red-500/50 hover:border-red-500">
+                                🗑 Delete
                             </button>
-                            <a :href="lightboxSrc" :download="lightboxName" class="text-xs bg-accent hover:bg-accent-dim text-white px-3 py-1.5 rounded-lg font-bold shadow transition-colors flex items-center gap-1.5">
-                               📥 Download
+                            <a :href="lightboxSrc" :download="lightboxName"
+                                class="text-xs bg-accent hover:bg-accent-dim text-white px-3 py-1.5 rounded-lg font-bold shadow transition-colors flex items-center gap-1.5">
+                                📥 Download
                             </a>
                         </div>
                     </div>
-                    
+
                     <div class="p-4 w-full flex-1 overflow-hidden flex items-center justify-center min-h-[300px] select-none"
-                         @wheel.prevent="handleZoom($event)"
-                         @mousedown="startPan($event)"
-                         @mousemove.window="doPan($event)"
-                         @mouseup.window="endPan()"
-                         @mouseleave="endPan()"
-                         :style="isPanning ? 'cursor: grabbing;' : 'cursor: grab;'">
-                        
-                        <div class="transition-transform duration-75 relative origin-center" 
-                             :style="`transform: translate(${lightboxPanX}px, ${lightboxPanY}px) scale(${lightboxZoom});`">
-                             
+                        @wheel.prevent="handleZoom($event)" @mousedown="startPan($event)"
+                        @mousemove.window="doPan($event)" @mouseup.window="endPan()" @mouseleave="endPan()"
+                        :style="isPanning ? 'cursor: grabbing;' : 'cursor: grab;'">
+
+                        <div class="transition-transform duration-75 relative origin-center"
+                            :style="`transform: translate(${lightboxPanX}px, ${lightboxPanY}px) scale(${lightboxZoom});`">
+
                             <template x-if="lightboxType.startsWith('image/')">
-                                <img :src="lightboxSrc" draggable="false" class="max-w-[90vw] max-h-[75vh] object-contain rounded drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)] bg-surface-900 border border-surface-600">
+                                <img :src="lightboxSrc" draggable="false"
+                                    class="max-w-[90vw] max-h-[75vh] object-contain rounded drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)] bg-surface-900 border border-surface-600">
                             </template>
-                            
+
                             <template x-if="!lightboxType.startsWith('image/')">
-                                <div class="flex flex-col items-center justify-center text-center gap-4 bg-surface-900 border border-surface-600 rounded-lg p-10 min-w-[300px] drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
+                                <div
+                                    class="flex flex-col items-center justify-center text-center gap-4 bg-surface-900 border border-surface-600 rounded-lg p-10 min-w-[300px] drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
                                     <span class="text-8xl mb-2">📄</span>
                                     <div class="text-gray-300">
                                         <p class="mb-2 text-xl font-semibold text-gray-100">File Attachment</p>
-                                        <p class="text-sm">Click the download button above to save this file locally.</p>
+                                        <p class="text-sm">Click the download button above to save this file locally.
+                                        </p>
                                     </div>
                                 </div>
                             </template>
                         </div>
                     </div>
-                    
+
                     <!-- Zoom Controls overlay -->
-                    <div class="absolute bottom-6 right-6 flex items-center gap-2 bg-surface-900/80 backdrop-blur border border-surface-600 rounded-lg p-1 shadow-lg pointer-events-auto">
-                        <button @click.prevent="lightboxZoom = Math.max(0.5, lightboxZoom - 0.2)" class="p-1 hover:bg-surface-700 rounded text-gray-300 hover:text-white transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                    <div
+                        class="absolute bottom-6 right-6 flex items-center gap-2 bg-surface-900/80 backdrop-blur border border-surface-600 rounded-lg p-1 shadow-lg pointer-events-auto">
+                        <button @click.prevent="lightboxZoom = Math.max(0.5, lightboxZoom - 0.2)"
+                            class="p-1 hover:bg-surface-700 rounded text-gray-300 hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4">
+                                </path>
+                            </svg>
                         </button>
-                        <button @click.prevent="resetZoom()" class="px-2 text-xs font-mono text-gray-400 hover:text-white transition-colors" x-text="Math.round(lightboxZoom * 100) + '%'"></button>
-                        <button @click.prevent="lightboxZoom = Math.min(5, lightboxZoom + 0.2)" class="p-1 hover:bg-surface-700 rounded text-gray-300 hover:text-white transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <button @click.prevent="resetZoom()"
+                            class="px-2 text-xs font-mono text-gray-400 hover:text-white transition-colors"
+                            x-text="Math.round(lightboxZoom * 100) + '%'"></button>
+                        <button @click.prevent="lightboxZoom = Math.min(5, lightboxZoom + 0.2)"
+                            class="p-1 hover:bg-surface-700 rounded text-gray-300 hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4"></path>
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -935,14 +950,14 @@
                     this.lightboxPanY = 0;
                 },
                 deleteInlineAttachment() {
-                    if(!this.lightboxTargetId) return;
-                    if(!confirm("Delete this attachment?")) return;
+                    if (!this.lightboxTargetId) return;
+                    if (!confirm("Delete this attachment?")) return;
                     const el = document.getElementById(this.lightboxTargetId);
-                    if(el) {
+                    if (el) {
                         const container = el.closest('[contenteditable]');
                         el.remove();
-                        if(container) { 
-                            container.dispatchEvent(new Event('input', { bubbles: true })); 
+                        if (container) {
+                            container.dispatchEvent(new Event('input', { bubbles: true }));
                             container.dispatchEvent(new Event('blur', { bubbles: true }));
                         }
                     }
@@ -1019,7 +1034,7 @@
                 async load() {
                     try {
                         let data = await this.getDBData('main');
-                        
+
                         // Migration from localStorage
                         if (!data) {
                             const raw = localStorage.getItem('focusflow');
@@ -1029,7 +1044,7 @@
                                 console.log('[FocusFlow] Migrated data to IndexedDB');
                             }
                         }
-                        
+
                         if (!data) return;
 
                         // Tasks
@@ -1059,15 +1074,15 @@
 
                         // Patch legacy images in notes to render correctly without being crushed by Tailwind defaults
                         const fixImages = (text) => {
-                             if(!text) return text;
-                             return text.replace(/<img(.*?)>/g, (match, attrs) => {
-                                 if(!attrs.includes('style=')) {
-                                     return `<img${attrs} style="max-width:100%; max-height:400px; display:inline-block; vertical-align: bottom;">`;
-                                 }
-                                 return match;
-                             });
+                            if (!text) return text;
+                            return text.replace(/<img(.*?)>/g, (match, attrs) => {
+                                if (!attrs.includes('style=')) {
+                                    return `<img${attrs} style="max-width:100%; max-height:400px; display:inline-block; vertical-align: bottom;">`;
+                                }
+                                return match;
+                            });
                         };
-                        
+
                         this.tasks.forEach(t => { t.notes = fixImages(t.notes); });
                         this.notes.forEach(n => { n.content = fixImages(n.content); });
 
@@ -1086,9 +1101,9 @@
                     try {
                         cleanTasks = JSON.parse(JSON.stringify(this.tasks));
                         cleanNotes = JSON.parse(JSON.stringify(this.notes));
-                    } catch(e) {
-                         console.error("Failed to clone for DB", e);
-                         return;
+                    } catch (e) {
+                        console.error("Failed to clone for DB", e);
+                        return;
                     }
 
                     const data = {
@@ -1101,7 +1116,7 @@
                     };
                     return this.setDBData('main', data).then(() => {
                         // After successful save to DB, we should also clear the old localStorage limit to avoid reloading it if DB fails later!
-                        if(localStorage.getItem('focusflow')) {
+                        if (localStorage.getItem('focusflow')) {
                             localStorage.removeItem('focusflow');
                         }
                     }).catch(e => console.error("IndexedDB Save Error:", e));
@@ -1370,7 +1385,7 @@
                 async handleFileDrop(event, targetType, targetId) {
                     if (targetType === 'task') this.isDraggingTaskFile = false;
                     if (targetType === 'note') this.isDraggingNoteFile = false;
-                    
+
                     const files = event.dataTransfer.files;
                     if (!files || files.length === 0) return;
 
@@ -1383,14 +1398,14 @@
                         dropRange.setStart(event.rangeParent, event.rangeOffset);
                     }
 
-                    
+
                     for (const file of files) {
                         try {
                             if (file.size > 5 * 1024 * 1024) {
                                 alert(`File "` + file.name + `" exceeds 5MB limit.`);
                                 continue;
                             }
-                            
+
                             const base64 = await this.readAsBase64(file);
                             let wrapper = document.createElement('span');
                             wrapper.contentEditable = "false";
