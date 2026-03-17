@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FocusFlow — Productivity Hub</title>
+    <meta name="description"
+        content="Offline-first productivity hub with Kanban task management, time tracking, and notes." />
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#10b981" />
+    <!-- iOS / Safari PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusFlow">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f0f'/><text y='.9em' font-size='80' x='10'>🎯</text></svg>">
+    <script src="./tailwind.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: {
+                            900: '#0a0a0a',
+                            800: '#111111',
+                            700: '#1a1a1a',
+                            600: '#222222',
+                            500: '#2a2a2a',
+                            400: '#333333',
+                            300: '#444444',
+                        },
+                        accent: {
+                            DEFAULT: '#10b981',
+                            dim: '#059669',
+                            glow: '#34d399',
+                            muted: '#064e3b',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-ui', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in': 'fadeIn 0.2s ease-out',
+                        'slide-in': 'slideIn 0.2s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideIn: { '0%': { opacity: '0', transform: 'translateY(6px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+
+        textarea {
+            resize: none;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+        }
+
+        input::placeholder,
+        textarea::placeholder {
+            color: #374151;
+        }
+
+        .timer-glow {
+            text-shadow: 0 0 24px rgba(16, 185, 129, 0.7), 0 0 48px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Kanban columns */
+        .kanban-col {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .kanban-col-header {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 0 2px 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .kanban-col-body {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 2px;
+        }
+
+        /* Task cards */
+        .task-card {
+            background: #1a1a1a;
+            border: 1px solid #222;
+            border-radius: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .task-card:hover {
+            border-color: #333;
+            background: #1f1f1f;
+        }
+
+        .task-card:active {
+            cursor: grabbing;
+        }
+
+        .task-card.dragging {
+            opacity: 0.5;
+            border-style: dashed;
+        }
+
+        .kanban-col-body.drag-over {
+            background: rgba(16, 185, 129, 0.03);
+            border-radius: 8px;
+            box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2);
+        }
+
+        .task-card.active {
+            border-color: #10b981;
+            background: #0d1f18;
+            box-shadow: 0 0 0 1px #10b981, 0 2px 12px rgba(16, 185, 129, 0.15);
+        }
+
+        .task-card.completed {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .task-card.completed:hover {
+            border-color: #222;
+            background: #1a1a1a;
+        }
+
+        /* Btn */
+        .btn {
+            transition: all 0.15s ease;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        /* Column dividers */
+        .col-divider {
+            width: 1px;
+            background: #1f1f1f;
+            flex-shrink: 0;
+            align-self: stretch;
+        }
+    </style>
+</head>
+
+<body class="bg-surface-900 text-gray-100 font-sans h-full flex flex-col" x-data="focusflow()" x-init="init()">
+
+    <!-- ══════════════════════════════════════════ TOP BAR -->
+    <header
+        class="flex items-center justify-between px-5 py-2.5 bg-surface-800 border-b border-surface-600 flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <span class="text-accent text-lg">🎯</span>
+            <span class="font-semibold text-sm tracking-wide">FocusFlow</span>
+            <span class="text-gray-600 text-xs">Productivity Hub</span>
+        </div>
+        <div class="flex items-center gap-5">
+            <span class="text-gray-600 text-xs font-mono" x-text="currentDateStr"></span>
+            <div class="text-xs text-gray-500">
+                <span class="text-accent font-semibold" x-text="tasks.filter(t=>t.status==='todo').length"></span> todo
+                ·
+                <span class="text-yellow-500 font-semibold"
+                    x-text="tasks.filter(t=>t.status==='inprogress').length"></span> in progress ·
+                <span class="text-gray-600 font-semibold" x-text="tasks.filter(t=>t.status==='done').length"></span>
+                done
+            </div>
+            <button @click="showStats = !showStats"
+                class="btn flex items-center gap-1.5 px-3 py-1 rounded bg-surface-700 hover:bg-surface-600 border border-surface-500 text-xs transition-all"
+                :class="showStats ? 'border-accent text-accent' : 'text-gray-400'">
+                📊 Stats
+            </button>
+        </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════ THREE-COLUMN BODY -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- ════════════════════════════════════════ LEFT — KANBAN BOARD -->
+        <div class="w-80 flex-shrink-0 flex flex-col bg-surface-800 border-r border-surface-600 overflow-hidden">
+
+            <!-- Add task input -->
+            <div class="p-3 border-b border-surface-600 flex-shrink-0">
+                <form @submit.prevent="addTask()" class="flex gap-2">
+                    <input id="new-task-input" x-model="newTaskTitle" type="text" placeholder="Add a task…"
+                        maxlength="80"
+                        class="flex-1 bg-surface-700 border border-surface-500 rounded-lg px-3 py-2 text-sm text-gray-100 focus:border-accent transition-colors" />
+                    <button type="submit" id="add-task-btn"
+                        class="btn bg-accent hover:bg-accent-dim text-white rounded-lg px-3 py-2 text-sm font-bold">+</button>
+                </form>
+            </div>
+
+            <!-- Kanban columns scroll area -->
+            <div class="flex-1 overflow-hidden p-3 flex flex-col gap-3">
+
+                <!-- ── TO DO -->
+                <div class="kanban-col flex-1 min-h-0">
+                    <div class="kanban-col-header text-gray-500">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block"></span>
+                        To Do
+                        <span class="ml-auto text-gray-600" x-text="tasks.filter(t=>t.status==='todo').length"></span>
+                    </div>
+                    <div class="kanban-col-body" @dragover.prevent="$el.classList.add('drag-over')"
+                        @dragleave="$el.classList.remove('drag-over')"
+                        @drop="$el.classList.remove('drag-over'); if(draggedTaskId) setStatus(draggedTaskId, 'todo')">
+                        <template x-if="tasks.filter(t=>t.status==='todo').length === 0">
+                            <div
+                                class="text-xs text-gray-700 text-center py-3 border border-dashed border-surface-500 rounded-lg">
+                                No tasks</div>
+                        </template>
+                        <template x-for="task in tasks.filter(t=>t.status==='todo')" :key="task.id">
+                            <div class="task-card" :class="{ 'active': activeTaskId === task.id }" draggable="true"
+                                @dragstart="draggedTaskId = task.id; $el.classList.add('dragging')"
+                                @dragend="$el.classList.remove('dragging'); draggedTaskId = null"
+                                @click="setActive(task.id)">
+                                <div class="flex items-start justify-between gap-2">
+                                    <span class="text-sm text-gray-200 leading-snug flex-1" x-text="task.title"></span>
+                                    <div class="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                                        <!-- Move to In Progress -->
+                                        <button @click.stop="setStatus(task.id, 'inprogress')"
+                                            title="Move to In Progress"
+                                            class="btn text-gray-600 hover:text-yellow-400 text-xs transition-colors">▶</button>
+                                        <!-- Delete -->
+                                        <button @click.stop="deleteTask(task.id)" title="Delete"
+                                            class="btn text-gray-700 hover:text-red-400 text-xs transition-colors">✕</button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1.5">
+                                    <span class="text-xs text-gray-600 font-mono" x-text="task.createdAt"></span>
+                                    <span x-show="task.elapsedTime > 0" class="text-xs text-accent font-mono"
+                                        x-text="formatTime(task.elapsedTime)"></span>
+                                    <span x-show="activeTaskId === task.id"
+                                        class="ml-auto flex items-center gap-1 text-xs text-accent">
+                                        <span
+                                            class="w-1 h-1 rounded-full bg-accent animate-pulse-slow inline-block"></span>
+                                        active
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- ── IN PROGRESS -->
+                <div class="kanban-col flex-1 min-h-0">
+                    <div class="kanban-col-header text-yellow-600">
+                        <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block animate-pulse-slow"></span>
+                        In Progress
+                        <span class="ml-auto text-gray-600"
+                            x-text="tasks.filter(t=>t.status==='inprogress').length"></span>
+                    </div>
+                    <div class="kanban-col-body" @dragover.prevent="$el.classList.add('drag-over')"
+                        @dragleave="$el.classList.remove('drag-over')"
+                        @drop="$el.classList.remove('drag-over'); if(draggedTaskId) setStatus(draggedTaskId, 'inprogress')">
+                        <template x-if="tasks.filter(t=>t.status==='inprogress').length === 0">
+                            <div
+                                class="text-xs text-gray-700 text-center py-3 border border-dashed border-surface-500 rounded-lg">
+                                No tasks in progress</div>
+                        </template>
+                        <template x-for="task in tasks.filter(t=>t.status==='inprogress')" :key="task.id">
+                            <div class="task-card" :class="{ 'active': activeTaskId === task.id }" draggable="true"
+                                @dragstart="draggedTaskId = task.id; $el.classList.add('dragging')"
+                                @dragend="$el.classList.remove('dragging'); draggedTaskId = null"
+                                @click="setActive(task.id)">
+                                <div class="flex items-start justify-between gap-2">
+                                    <span class="text-sm text-gray-200 leading-snug flex-1" x-text="task.title"></span>
+                                    <div class="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                                        <!-- Move back to Todo -->
+                                        <button @click.stop="setStatus(task.id, 'todo')" title="Move back to To Do"
+                                            class="btn text-gray-600 hover:text-gray-300 text-xs transition-colors">◀</button>
+                                        <!-- Move to Done -->
+                                        <button @click.stop="setStatus(task.id, 'done')" title="Mark Done"
+                                            class="btn text-gray-600 hover:text-accent text-xs transition-colors">✓</button>
+                                        <!-- Delete -->
+                                        <button @click.stop="deleteTask(task.id)" title="Delete"
+                                            class="btn text-gray-700 hover:text-red-400 text-xs transition-colors">✕</button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1.5">
+                                    <span class="text-xs text-gray-600 font-mono" x-text="task.createdAt"></span>
+                                    <span x-show="task.elapsedTime > 0" class="text-xs text-yellow-600 font-mono"
+                                        x-text="formatTime(task.elapsedTime)"></span>
+                                    <span x-show="activeTaskId === task.id"
+                                        class="ml-auto flex items-center gap-1 text-xs text-accent">
+                                        <span
+                                            class="w-1 h-1 rounded-full bg-accent animate-pulse-slow inline-block"></span>
+                                        active
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="kanban-col flex-1 min-h-0">
+                    <div class="kanban-col-header text-gray-600">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gray-600 inline-block"></span>
+                        Done
+                        <span class="ml-auto text-gray-700" x-text="tasks.filter(t=>t.status==='done').length"></span>
+                    </div>
+                    <div class="kanban-col-body" @dragover.prevent="$el.classList.add('drag-over')"
+                        @dragleave="$el.classList.remove('drag-over')"
+                        @drop="$el.classList.remove('drag-over'); if(draggedTaskId) setStatus(draggedTaskId, 'done')">
+                        <template x-if="tasks.filter(t=>t.status==='done').length === 0">
+                            <div
+                                class="text-xs text-gray-700 text-center py-3 border border-dashed border-surface-600 rounded-lg">
+                                Nothing completed yet</div>
+                        </template>
+                        <template x-for="task in tasks.filter(t=>t.status==='done')" :key="task.id">
+                            <div class="task-card completed" draggable="true"
+                                @dragstart="draggedTaskId = task.id; $el.classList.add('dragging')"
+                                @dragend="$el.classList.remove('dragging'); draggedTaskId = null"
+                                @click="setActive(task.id)">
+                                <div class="flex items-start justify-between gap-2">
+                                    <span class="text-sm text-gray-600 leading-snug flex-1 line-through"
+                                        x-text="task.title"></span>
+                                    <div class="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                                        <!-- Reopen -->
+                                        <button @click.stop="setStatus(task.id, 'todo')" title="Reopen"
+                                            class="btn text-gray-700 hover:text-gray-400 text-xs transition-colors">↩</button>
+                                        <!-- Delete -->
+                                        <button @click.stop="deleteTask(task.id)" title="Delete"
+                                            class="btn text-gray-700 hover:text-red-400 text-xs transition-colors">✕</button>
+                                    </div>
+                                </div>
+                                <div x-show="task.elapsedTime > 0" class="mt-1">
+                                    <span class="text-xs text-gray-700 font-mono"
+                                        x-text="formatTime(task.elapsedTime)"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════ MIDDLE — TIMER + TASK NOTES -->
+        <div class="flex-1 flex flex-col overflow-hidden bg-surface-900 border-r border-surface-600">
+
+            <!-- No active task -->
+            <template x-if="!activeTask">
+                <div class="flex-1 flex flex-col items-center justify-center text-center p-8 animate-fade-in">
+                    <div class="text-5xl mb-4 opacity-20">⏱</div>
+                    <div class="text-base font-semibold text-gray-600 mb-1">No task selected</div>
+                    <div class="text-xs text-gray-700 max-w-xs">Click a task card on the left to open it here, then
+                        press <span class="text-accent font-mono">▶ Start</span> to begin timing.</div>
+                </div>
+            </template>
+
+            <!-- Active task -->
+            <template x-if="activeTask">
+                <div class="flex-1 flex flex-col overflow-hidden animate-slide-in">
+
+                    <!-- Task header -->
+                    <div
+                        class="flex items-start justify-between px-5 pt-5 pb-3 flex-shrink-0 border-b border-surface-600">
+                        <div class="flex-1 min-w-0 pr-4">
+                            <div class="text-xs text-gray-600 uppercase tracking-widest mb-1">Focus</div>
+                            <input type="text" x-model="activeTask.title" @input="save()"
+                                class="w-full bg-transparent text-lg font-semibold text-gray-100 placeholder-gray-500 focus:outline-none focus:border-b focus:border-accent transition-colors"
+                                placeholder="Task Title">
+                            <div class="text-xs text-gray-700 mt-0.5" x-text="'Created ' + activeTask.createdAt"></div>
+                        </div>
+                        <!-- Status buttons — always visible, 3 pills -->
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <button @click="setStatus(activeTask.id, 'todo')"
+                                class="btn text-xs px-3 py-1.5 rounded-full border transition-all" :class="activeTask.status === 'todo'
+                                    ? 'bg-surface-500 border-gray-400 text-gray-200 font-semibold'
+                                    : 'border-surface-500 text-gray-600 hover:border-gray-500 hover:text-gray-400'">
+                                To Do
+                            </button>
+                            <button @click="setStatus(activeTask.id, 'inprogress')"
+                                class="btn text-xs px-3 py-1.5 rounded-full border transition-all"
+                                :class="activeTask.status === 'inprogress'
+                                    ? 'bg-yellow-900 border-yellow-600 text-yellow-400 font-semibold'
+                                    : 'border-surface-500 text-gray-600 hover:border-yellow-700 hover:text-yellow-600'">
+                                ▶ In Progress
+                            </button>
+                            <button @click="setStatus(activeTask.id, 'done')"
+                                class="btn text-xs px-3 py-1.5 rounded-full border transition-all" :class="activeTask.status === 'done'
+                                    ? 'bg-accent border-accent text-white font-semibold'
+                                    : 'border-surface-500 text-gray-600 hover:border-accent hover:text-accent'">
+                                ✓ Done
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Timer + Subtasks row -->
+                    <div class="flex-shrink-0 flex border-b border-surface-600" style="height:220px;min-height:0">
+
+                        <!-- Timer (left) -->
+                        <div class="flex flex-col items-center justify-center px-6 py-5 text-center border-r border-surface-600"
+                            style="width:220px;flex-shrink:0">
+                            <div class="flex items-center gap-2 mb-4">
+                                <button @click="timerMode = 'manual'; stopTimer()"
+                                    class="text-[10px] uppercase tracking-tighter px-2 py-0.5 rounded border transition-all"
+                                    :class="timerMode === 'manual' ? 'border-accent text-accent bg-accent/10' : 'border-surface-400 text-gray-600 hover:text-gray-400'">
+                                    Manual
+                                </button>
+                                <button @click="timerMode = 'pomo'; stopTimer(); resetPomo()"
+                                    class="text-[10px] uppercase tracking-tighter px-2 py-0.5 rounded border transition-all"
+                                    :class="timerMode === 'pomo' ? 'border-accent text-accent bg-accent/10' : 'border-surface-400 text-gray-600 hover:text-gray-400'">
+                                    Pomodoro
+                                </button>
+                            </div>
+
+                            <div class="font-mono text-4xl font-bold tracking-wider mb-2"
+                                :class="timerRunning ? 'text-accent timer-glow' : 'text-gray-600'"
+                                x-text="timerMode === 'manual' ? formatTime(displayElapsed) : formatTime(pomoTimeLeft)">
+                            </div>
+
+                            <!-- Pomo Session Indicator -->
+                            <div x-show="timerMode === 'pomo'" class="mb-4">
+                                <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded"
+                                    :class="pomoSession === 'focus' ? 'bg-accent/20 text-accent' : 'bg-blue-900/40 text-blue-400'"
+                                    x-text="pomoSession === 'focus' ? 'Focus Session' : 'Short Break'">
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="toggleTimer()" id="timer-toggle-btn"
+                                    class="btn px-5 py-1.5 rounded-full text-sm font-semibold transition-all" :class="timerRunning
+                                        ? 'bg-surface-600 hover:bg-surface-500 text-gray-400 border border-surface-400'
+                                        : 'bg-accent hover:bg-accent-dim text-white'"
+                                    x-text="timerRunning ? '⏸ Pause' : (displayElapsed > 0 ? '▶ Resume' : '▶ Start')">
+                                </button>
+                                <button @click="resetTimer()" id="timer-reset-btn"
+                                    class="btn px-3 py-1.5 rounded-full text-sm text-gray-600 hover:text-red-400 border border-surface-500 hover:border-red-500 transition-all">
+                                    ↺
+                                </button>
+                            </div>
+                            <div x-show="timerRunning" class="flex items-center gap-1.5 mt-3">
+                                <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse inline-block"></span>
+                                <span class="text-xs text-accent">Recording…</span>
+                            </div>
+                        </div>
+
+                        <!-- Subtasks (right) -->
+                        <div class="flex-1 flex flex-col overflow-hidden">
+                            <!-- Header + progress -->
+                            <div class="flex items-center gap-3 px-4 py-2.5 border-b border-surface-600 flex-shrink-0">
+                                <span class="text-xs text-gray-600 uppercase tracking-widest">Subtasks</span>
+                                <template x-if="activeTask.subtasks && activeTask.subtasks.length > 0">
+                                    <div class="flex items-center gap-2 ml-auto">
+                                        <span class="text-xs text-gray-600 font-mono"
+                                            x-text="activeTask.subtasks.filter(s=>s.done).length + '/' + activeTask.subtasks.length">
+                                        </span>
+                                        <div class="w-20 h-1 bg-surface-500 rounded-full overflow-hidden">
+                                            <div class="h-full bg-accent rounded-full transition-all duration-300"
+                                                :style="'width:' + (activeTask.subtasks.length ? Math.round(activeTask.subtasks.filter(s=>s.done).length / activeTask.subtasks.length * 100) : 0) + '%'">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <!-- Subtask list -->
+                            <div class="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-1">
+                                <template x-if="!activeTask.subtasks || activeTask.subtasks.length === 0">
+                                    <div class="text-xs text-gray-700 py-3 text-center">No subtasks yet. Add one below.
+                                    </div>
+                                </template>
+                                <template x-for="sub in activeTask.subtasks" :key="sub.id">
+                                    <div class="flex items-center gap-2 group py-1 px-2 rounded-lg cursor-pointer hover:bg-surface-700/40 transition-all"
+                                        @click="toggleSubtask(activeTask.id, sub.id)">
+                                        <!-- Checkbox (Visual) -->
+                                        <div class="flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center"
+                                            :class="sub.done ? 'bg-accent border-accent' : 'border-surface-400 group-hover:border-accent'">
+                                            <span x-show="sub.done" class="text-white text-[10px] leading-none">✓</span>
+                                        </div>
+                                        <!-- Text -->
+                                        <span class="flex-1 text-sm leading-snug select-none"
+                                            :class="sub.done ? 'line-through text-gray-600' : 'text-gray-300'"
+                                            x-text="sub.text">
+                                        </span>
+                                        <!-- Delete -->
+                                        <button @click.stop="deleteSubtask(activeTask.id, sub.id)"
+                                            class="btn text-gray-700 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">✕</button>
+                                    </div>
+                                </template>
+                            </div>
+                            <!-- Add subtask input -->
+                            <div class="flex-shrink-0 px-4 py-2.5 border-t border-surface-600">
+                                <form @submit.prevent="addSubtask(activeTask.id)" class="flex gap-2">
+                                    <input id="new-subtask-input" x-model="newSubtaskText" type="text"
+                                        placeholder="Add subtask…" maxlength="120"
+                                        class="flex-1 bg-surface-700 border border-surface-500 rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:border-accent transition-colors" />
+                                    <button type="submit"
+                                        class="btn bg-surface-600 hover:bg-surface-500 border border-surface-400 text-gray-300 rounded-lg px-3 py-1.5 text-xs font-bold transition-all">+</button>
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Task Notes -->
+                    <div class="flex-1 flex flex-col overflow-hidden relative"
+                        @dragover="if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0 && !$event.dataTransfer.types.includes('text/html')) { $event.preventDefault(); isDraggingTaskFile = true; }"
+                        @dragleave="isDraggingTaskFile = false"
+                        @dragstart="window._isDraggingInternal = true; $event.dataTransfer.effectAllowed = 'copyMove'; window._draggedSpan = $event.target.closest('span.inline-attachment');" 
+                        @dragend="window._isDraggingInternal = false; window._draggedSpan = null;" 
+                        @drop="if(window._isDraggingInternal) { if(window._draggedSpan) { $event.preventDefault(); let dropRange = null; if (document.caretRangeFromPoint) dropRange = document.caretRangeFromPoint($event.clientX, $event.clientY); else if ($event.rangeParent) { dropRange = document.createRange(); dropRange.setStart($event.rangeParent, $event.rangeOffset); } if(dropRange) { const frag = document.createDocumentFragment(); frag.appendChild(document.createTextNode('\u200B')); frag.appendChild(window._draggedSpan); frag.appendChild(document.createTextNode('\u200B')); dropRange.insertNode(frag); dropRange.collapse(false); } const ce = $el; setTimeout(() => { ce.dispatchEvent(new Event('input', { bubbles: true })); ce.dispatchEvent(new Event('blur', { bubbles: true })); save(); }, 10); } } else if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0) { $event.preventDefault(); handleFileDrop($event, 'task', activeTask.id); }">
+
+                        
+
+                        <div
+                            class="flex items-center justify-between px-5 py-2.5 border-b border-surface-600 flex-shrink-0">
+                            <span class="text-xs text-gray-600 uppercase tracking-widest">Task Notes</span>
+                            <span class="text-xs text-accent transition-opacity duration-300"
+                                :class="notesSaved ? 'opacity-100' : 'opacity-0'" id="notes-saved-indicator">✓
+                                Saved</span>
+                        </div>
+                        <div id="task-notes-area" 
+                            contenteditable="true" 
+                            x-init="$watch('activeTaskId', () => { $el.innerHTML = activeTask ? (activeTask.notes || '').replace(/\n/g, '<br>') : ''; })"
+                            x-effect="if(activeTask && document.activeElement !== $el) { $el.innerHTML = (activeTask.notes || '').replace(/\n/g, '<br>'); }"
+                            @input="if(activeTask) { activeTask.notes = $el.innerHTML; onTaskNotesInput(); }"
+                            @blur="save()"
+                            @keydown="if($event.key === 'Backspace') { const sel = window.getSelection(); if (sel.rangeCount > 0 && sel.getRangeAt(0).collapsed) { const r = sel.getRangeAt(0); let target = null; let brToRemove = null; const checkPrev = (prev) => { if (prev && prev.tagName === 'BR') { const prevPrev = prev.previousSibling; if (prevPrev && prevPrev.nodeType === 1 && prevPrev.classList && prevPrev.classList.contains('inline-attachment')) { brToRemove = prev; return prevPrev; } } if (prev && prev.nodeType === 1 && prev.classList && prev.classList.contains('inline-attachment')) { return prev; } return null; }; if (r.startContainer.nodeType === 1) { const prev = r.startContainer.childNodes[r.startOffset - 1]; target = checkPrev(prev); } else if (r.startContainer.nodeType === 3 && r.startOffset === 0) { const prev = r.startContainer.previousSibling; target = checkPrev(prev); } if (target) { $event.preventDefault(); if (brToRemove) brToRemove.remove(); const next = target.nextSibling; if (next && next.tagName === 'BR') next.remove(); target.remove(); $el.dispatchEvent(new Event('input', { bubbles: true })); save(); } } }"
+                            @dblclick="if($event.target.tagName === 'IMG') { const span = $event.target.closest('span.inline-attachment'); openLightbox('image/png', $event.target.src, 'Image', span ? span.id : null); } else if ($event.target.closest('a.attachment-file')) { const a = $event.target.closest('a.attachment-file'); const span = a.closest('span.inline-attachment'); openLightbox('file', a.href, a.download, span ? span.id : null); $event.preventDefault(); }"
+                            class="empty:before:content-[attr(data-placeholder)] before:text-gray-500 flex-1 bg-transparent px-5 py-4 text-sm text-gray-300 leading-relaxed focus:outline-none overflow-y-auto"
+                            style="white-space: pre-wrap;"
+                            data-placeholder="Capture thoughts, links, subtasks… Or drag & drop files here!"></div>
+                        
+                        </div>
+                    </div>
+
+
+                </div>
+            </template>
+        </div>
+
+        <!-- ════════════════════════════════════════ RIGHT — GLOBAL NOTES -->
+        <div class="w-72 flex-shrink-0 flex flex-col bg-surface-800 overflow-hidden border-l border-surface-600">
+
+            <!-- VIEW 1: NOTE LIST -->
+            <div x-show="!activeNoteId" class="flex-1 flex flex-col overflow-hidden animate-fade-in">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-surface-600 flex-shrink-0">
+                    <div class="flex items-center gap-2">
+                        <span class="text-accent text-xs">📝</span>
+                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Quick Notes</span>
+                    </div>
+                    <button @click="addNote()"
+                        class="text-xs bg-surface-700 hover:bg-surface-600 border border-surface-500 text-gray-300 px-2 py-1 rounded transition-colors shadow-sm">
+                        + New
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+                    <template x-if="notes.length === 0">
+                        <div class="text-xs text-gray-600 text-center py-8 italic opacity-60">
+                            Empty pad.<br>Click "+ New" to start.
+                        </div>
+                    </template>
+                    <template x-for="note in notes" :key="note.id">
+                        <div @click="activeNoteId = note.id"
+                            class="bg-surface-700/50 hover:bg-surface-700 border border-surface-600 hover:border-surface-500 p-3 rounded-lg cursor-pointer group transition-all relative">
+                            <div class="font-semibold text-sm text-gray-200 mb-1 truncate pr-4"
+                                x-text="note.title || 'Untitled'"></div>
+                            <div class="text-xs text-gray-500 line-clamp-3 leading-relaxed"
+                                x-text="note.content ? note.content.substring(0, 100) : 'No content...'"></div>
+                            <div class="mt-2 text-[10px] text-gray-600 font-mono"
+                                x-text="toDateStr(new Date(note.updatedAt))"></div>
+
+                            <!-- Delete Button (List View) -->
+                            <button @click.stop="deleteNote(note.id)"
+                                class="absolute top-2 right-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1">
+                                🗑
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- VIEW 2: NOTE DETAIL (EDITOR) -->
+            <div x-show="activeNoteId" class="flex-1 flex flex-col overflow-hidden animate-slide-in relative"
+                @dragover="if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0 && !$event.dataTransfer.types.includes('text/html')) { $event.preventDefault(); isDraggingNoteFile = true; }"
+                @dragleave="isDraggingNoteFile = false"
+                @dragstart="window._isDraggingInternal = true; $event.dataTransfer.effectAllowed = 'copyMove'; window._draggedSpan = $event.target.closest('span.inline-attachment');" 
+                @dragend="window._isDraggingInternal = false; window._draggedSpan = null;" 
+                @drop="if(window._isDraggingInternal) { if(window._draggedSpan) { $event.preventDefault(); let dropRange = null; if (document.caretRangeFromPoint) dropRange = document.caretRangeFromPoint($event.clientX, $event.clientY); else if ($event.rangeParent) { dropRange = document.createRange(); dropRange.setStart($event.rangeParent, $event.rangeOffset); } if(dropRange) { const frag = document.createDocumentFragment(); frag.appendChild(document.createTextNode('\u200B')); frag.appendChild(window._draggedSpan); frag.appendChild(document.createTextNode('\u200B')); dropRange.insertNode(frag); dropRange.collapse(false); } const ce = $el; setTimeout(() => { ce.dispatchEvent(new Event('input', { bubbles: true })); ce.dispatchEvent(new Event('blur', { bubbles: true })); save(); }, 10); } } else if($event.dataTransfer.types.includes('Files') && $event.dataTransfer.types.length > 0) { $event.preventDefault(); handleFileDrop($event, 'note', activeNoteId); }">
+
+                
+
+                <div
+                    class="flex items-center justify-between px-3 py-2 border-b border-surface-600 flex-shrink-0 bg-surface-800">
+                    <button @click="activeNoteId = null"
+                        class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-surface-700">
+                        ◀ Back
+                    </button>
+                    <button @click="deleteNote(activeNoteId)"
+                        class="text-xs text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
+                        title="Delete Note">
+                        🗑
+                    </button>
+                </div>
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <input type="text" id="note-title-input" x-model="activeNote.title" @input="save()"
+                        placeholder="Note Title"
+                        class="flex-shrink-0 bg-transparent px-4 pt-4 pb-2 text-base font-bold text-gray-100 placeholder-gray-600 focus:outline-none focus:border-b focus:border-surface-600 transition-colors">
+                    <div id="note-content-area"
+                        contenteditable="true"
+                        x-init="$watch('activeNoteId', () => { $el.innerHTML = activeNote ? (activeNote.content || '').replace(/\n/g, '<br>') : ''; })"
+                        x-effect="if(activeNote && document.activeElement !== $el) { $el.innerHTML = (activeNote.content || '').replace(/\n/g, '<br>'); }"
+                        @input="if(activeNote) { activeNote.content = $el.innerHTML; save(); }"
+                        @blur="save()"
+                        @keydown="if($event.key === 'Backspace') { const sel = window.getSelection(); if (sel.rangeCount > 0 && sel.getRangeAt(0).collapsed) { const r = sel.getRangeAt(0); let target = null; let brToRemove = null; const checkPrev = (prev) => { if (prev && prev.tagName === 'BR') { const prevPrev = prev.previousSibling; if (prevPrev && prevPrev.nodeType === 1 && prevPrev.classList && prevPrev.classList.contains('inline-attachment')) { brToRemove = prev; return prevPrev; } } if (prev && prev.nodeType === 1 && prev.classList && prev.classList.contains('inline-attachment')) { return prev; } return null; }; if (r.startContainer.nodeType === 1) { const prev = r.startContainer.childNodes[r.startOffset - 1]; target = checkPrev(prev); } else if (r.startContainer.nodeType === 3 && r.startOffset === 0) { const prev = r.startContainer.previousSibling; target = checkPrev(prev); } if (target) { $event.preventDefault(); if (brToRemove) brToRemove.remove(); const next = target.nextSibling; if (next && next.tagName === 'BR') next.remove(); target.remove(); $el.dispatchEvent(new Event('input', { bubbles: true })); save(); } } }"
+                        @dblclick="if($event.target.tagName === 'IMG') { const span = $event.target.closest('span.inline-attachment'); openLightbox('image/png', $event.target.src, 'Image', span ? span.id : null); } else if ($event.target.closest('a.attachment-file')) { const a = $event.target.closest('a.attachment-file'); const span = a.closest('span.inline-attachment'); openLightbox('file', a.href, a.download, span ? span.id : null); $event.preventDefault(); }"
+                        class="empty:before:content-[attr(data-placeholder)] before:text-gray-500 flex-1 bg-transparent px-4 py-2 text-sm text-gray-300 leading-relaxed focus:outline-none overflow-y-auto"
+                        style="white-space: pre-wrap;"
+                        data-placeholder="Type something... Or drag & drop files here!"></div>
+                    
+                    </div>
+            </div>
+
+        </div>
+
+        </div>
+
+    </div>
+
+    <!-- Stats Overlay -->
+    <template x-if="showStats">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-fade-in"
+            @click.self="showStats = false">
+            <div
+                class="bg-surface-800 border border-surface-600 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+                <div class="px-6 py-4 border-b border-surface-600 flex items-center justify-between">
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-gray-500">Control Center</h2>
+                    <button @click="showStats = false; restoreConfirm = false"
+                        class="text-gray-500 hover:text-white transition-colors">✕</button>
+                </div>
+                <!-- Tabs / Sections -->
+                <div class="p-6 flex flex-col gap-6">
+
+                    <!-- Analytics Section -->
+                    <div class="flex flex-col gap-4">
+                        <div class="text-[10px] uppercase tracking-widest text-gray-600 font-bold">Analytics</div>
+                        <div class="text-center bg-surface-700/30 p-4 rounded-xl border border-surface-600">
+                            <div class="text-[10px] uppercase tracking-widest text-gray-600 mb-1">Total Focus Time</div>
+                            <div class="text-3xl font-bold font-mono text-accent"
+                                x-text="formatTime(tasks.reduce((acc, t) => acc + (t.elapsedTime || 0), 0))"></div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-surface-700 p-2.5 rounded-xl border border-surface-600 text-center">
+                                <div class="text-[10px] uppercase text-gray-600 mb-1">To Do</div>
+                                <div class="text-lg font-bold" x-text="tasks.filter(t=>t.status==='todo').length"></div>
+                            </div>
+                            <div class="bg-surface-700 p-2.5 rounded-xl border border-surface-600 text-center">
+                                <div class="text-[10px] uppercase text-yellow-600 mb-1">Active</div>
+                                <div class="text-lg font-bold text-yellow-500"
+                                    x-text="tasks.filter(t=>t.status==='inprogress').length"></div>
+                            </div>
+                            <div class="bg-surface-700 p-2.5 rounded-xl border border-surface-600 text-center">
+                                <div class="text-[10px] uppercase text-accent-dim mb-1">Done</div>
+                                <div class="text-lg font-bold text-accent"
+                                    x-text="tasks.filter(t=>t.status==='done').length"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Portability Section -->
+                    <div class="flex flex-col gap-3">
+                        <div class="text-[10px] uppercase tracking-widest text-gray-600 font-bold">Data & Portability
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button @click="exportData()"
+                                class="btn flex items-center justify-center gap-2 bg-surface-700 hover:bg-surface-600 border border-surface-500 p-3 rounded-xl transition-all">
+                                <span class="text-lg">💾</span>
+                                <div class="text-left">
+                                    <div class="text-[10px] font-bold text-gray-300 uppercase tracking-tight">Export
+                                    </div>
+                                    <div class="text-[9px] text-gray-500">JSON Backup</div>
+                                </div>
+                            </button>
+
+                            <div class="relative">
+                                <button @click="restoreConfirm = !restoreConfirm"
+                                    class="btn w-full h-full flex items-center justify-center gap-2 bg-surface-700 hover:bg-surface-600 border border-surface-500 p-3 rounded-xl transition-all"
+                                    :class="restoreConfirm ? 'border-red-500 bg-red-900/10' : ''">
+                                    <span class="text-lg">📂</span>
+                                    <div class="text-left">
+                                        <div class="text-[10px] font-bold text-gray-300 uppercase tracking-tight"
+                                            x-text="restoreConfirm ? 'Confirm?' : 'Import'"></div>
+                                        <div class="text-[9px] text-gray-500">Restore File</div>
+                                    </div>
+                                </button>
+                                <input type="file" x-show="restoreConfirm"
+                                    @change="importData($event); restoreConfirm = false"
+                                    class="absolute inset-0 opacity-0 cursor-pointer" accept=".json" />
+                            </div>
+                        </div>
+                        <div x-show="restoreConfirm" class="text-[9px] text-red-400 text-center animate-pulse">
+                            ⚠️ Warning: Importing will overwrite your current workspace!
+                        </div>
+                    </div>
+
+                    <!-- Subtasks Progress -->
+                    <div class="bg-surface-700/50 p-4 rounded-xl border border-surface-600">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] uppercase tracking-widest text-gray-600 font-bold">Completion
+                                Rate</span>
+                            <span class="text-xs font-bold text-accent"
+                                x-text="Math.round((tasks.flatMap(t=>t.subtasks||[]).filter(s=>s.done).length / (tasks.flatMap(t=>t.subtasks||[]).length || 1)) * 100) + '%'"></span>
+                        </div>
+                        <div class="w-full h-1.5 bg-surface-600 rounded-full overflow-hidden">
+                            <div class="h-full bg-accent transition-all duration-500"
+                                :style="'width:' + (tasks.flatMap(t=>t.subtasks||[]).length ? (tasks.flatMap(t=>t.subtasks||[]).filter(s=>s.done).length / tasks.flatMap(t=>t.subtasks||[]).length * 100) : 0) + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-surface-700/30 border-t border-surface-600 text-center">
+                    <button @click="showStats = false; restoreConfirm = false"
+                        class="text-xs font-semibold text-accent hover:underline">Done</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Lightbox Overlay -->
+    <template x-if="lightboxOpen">
+        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-black/90 backdrop-blur-md animate-fade-in"
+            @click.self="closeLightbox()">
+            <div class="relative max-w-5xl w-full max-h-full flex flex-col items-center justify-center animate-slide-in">
+                <!-- Close Button -->
+                <button @click="closeLightbox()" class="absolute -top-10 right-0 md:-right-10 btn text-gray-400 hover:text-white text-3xl font-light focus:outline-none">&times;</button>
+                
+                <!-- Content -->
+                <div class="bg-surface-800 rounded-xl overflow-hidden shadow-2xl border border-surface-600 flex flex-col items-center w-full max-h-full">
+                    
+                    <div class="w-full px-4 py-3 border-b border-surface-600 bg-surface-900 flex items-center justify-between flex-shrink-0">
+                        <span class="text-sm font-semibold text-gray-200 truncate pr-4" x-text="lightboxName"></span>
+                        <div class="flex items-center gap-2">
+                            <button x-show="lightboxTargetId" @click="deleteInlineAttachment()" class="text-xs bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1.5 rounded-lg font-bold shadow transition-colors flex items-center gap-1.5 border border-red-500/50 hover:border-red-500">
+                               🗑 Delete
+                            </button>
+                            <a :href="lightboxSrc" :download="lightboxName" class="text-xs bg-accent hover:bg-accent-dim text-white px-3 py-1.5 rounded-lg font-bold shadow transition-colors flex items-center gap-1.5">
+                               📥 Download
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 w-full flex-1 overflow-hidden flex items-center justify-center min-h-[300px] select-none"
+                         @wheel.prevent="handleZoom($event)"
+                         @mousedown="startPan($event)"
+                         @mousemove.window="doPan($event)"
+                         @mouseup.window="endPan()"
+                         @mouseleave="endPan()"
+                         :style="isPanning ? 'cursor: grabbing;' : 'cursor: grab;'">
+                        
+                        <div class="transition-transform duration-75 relative origin-center" 
+                             :style="`transform: translate(${lightboxPanX}px, ${lightboxPanY}px) scale(${lightboxZoom});`">
+                             
+                            <template x-if="lightboxType.startsWith('image/')">
+                                <img :src="lightboxSrc" draggable="false" class="max-w-[90vw] max-h-[75vh] object-contain rounded drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)] bg-surface-900 border border-surface-600">
+                            </template>
+                            
+                            <template x-if="!lightboxType.startsWith('image/')">
+                                <div class="flex flex-col items-center justify-center text-center gap-4 bg-surface-900 border border-surface-600 rounded-lg p-10 min-w-[300px] drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
+                                    <span class="text-8xl mb-2">📄</span>
+                                    <div class="text-gray-300">
+                                        <p class="mb-2 text-xl font-semibold text-gray-100">File Attachment</p>
+                                        <p class="text-sm">Click the download button above to save this file locally.</p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- Zoom Controls overlay -->
+                    <div class="absolute bottom-6 right-6 flex items-center gap-2 bg-surface-900/80 backdrop-blur border border-surface-600 rounded-lg p-1 shadow-lg pointer-events-auto">
+                        <button @click.prevent="lightboxZoom = Math.max(0.5, lightboxZoom - 0.2)" class="p-1 hover:bg-surface-700 rounded text-gray-300 hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                        </button>
+                        <button @click.prevent="resetZoom()" class="px-2 text-xs font-mono text-gray-400 hover:text-white transition-colors" x-text="Math.round(lightboxZoom * 100) + '%'"></button>
+                        <button @click.prevent="lightboxZoom = Math.min(5, lightboxZoom + 0.2)" class="p-1 hover:bg-surface-700 rounded text-gray-300 hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Alpine.js (Local) -->
+    <script src="./alpine.min.js" defer></script>
+    <script>
+        // ── Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(r => console.log('[FocusFlow] SW:', r.scope))
+                    .catch(e => console.warn('[FocusFlow] SW failed:', e));
+            });
+        }
+
+        // ── App
+        function focusflow() {
+            return {
+                // State
+                tasks: [],
+                notes: [], // Array of { id, title, content, updatedAt }
+                activeNoteId: null,
+                activeTaskId: null,
+                newTaskTitle: '',
+                newSubtaskText: '',
+                notesSavedTimer: null,
+                draggedTaskId: null,
+                showStats: false,
+                restoreConfirm: false,
+                timerMode: 'manual',
+                pomoSession: 'focus',
+                pomoTimeLeft: 25 * 60,
+
+                // DB & Attachments
+                db: null,
+                dbReady: false,
+                isDraggingTaskFile: false,
+                isDraggingNoteFile: false,
+
+                // Lightbox
+                lightboxOpen: false,
+                lightboxSrc: null,
+                lightboxType: null,
+                lightboxName: null,
+                lightboxTargetId: null,
+                lightboxZoom: 1,
+                lightboxPanX: 0,
+                lightboxPanY: 0,
+                isPanning: false,
+                panStartX: 0,
+                panStartY: 0,
+
+                openLightbox(type, data, name, targetId) {
+                    this.lightboxZoom = 1;
+                    this.lightboxPanX = 0;
+                    this.lightboxPanY = 0;
+                    this.lightboxType = type || '';
+                    this.lightboxSrc = data;
+                    this.lightboxName = name || 'Attachment';
+                    this.lightboxTargetId = targetId || null;
+                    this.lightboxOpen = true;
+                },
+                closeLightbox() {
+                    this.lightboxOpen = false;
+                    setTimeout(() => {
+                        this.lightboxSrc = null;
+                        this.lightboxType = null;
+                        this.lightboxName = null;
+                        this.lightboxTargetId = null;
+                    }, 200);
+                },
+                startPan(e) {
+                    this.isPanning = true;
+                    this.panStartX = e.clientX - this.lightboxPanX;
+                    this.panStartY = e.clientY - this.lightboxPanY;
+                },
+                doPan(e) {
+                    if (!this.isPanning) return;
+                    this.lightboxPanX = e.clientX - this.panStartX;
+                    this.lightboxPanY = e.clientY - this.panStartY;
+                },
+                endPan() {
+                    if (this.isPanning) {
+                        this.isPanning = false;
+                    }
+                },
+                handleZoom(e) {
+                    // Zoom towards center of viewport
+                    const zoomStep = 0.1;
+                    if (e.deltaY < 0) {
+                        this.lightboxZoom = Math.min(this.lightboxZoom + zoomStep, 5); // Max 5x zoom
+                    } else {
+                        this.lightboxZoom = Math.max(this.lightboxZoom - zoomStep, 0.5); // Min 0.5x zoom
+                    }
+                },
+                resetZoom() {
+                    this.lightboxZoom = 1;
+                    this.lightboxPanX = 0;
+                    this.lightboxPanY = 0;
+                },
+                deleteInlineAttachment() {
+                    if(!this.lightboxTargetId) return;
+                    if(!confirm("Delete this attachment?")) return;
+                    const el = document.getElementById(this.lightboxTargetId);
+                    if(el) {
+                        const container = el.closest('[contenteditable]');
+                        el.remove();
+                        if(container) { 
+                            container.dispatchEvent(new Event('input', { bubbles: true })); 
+                            container.dispatchEvent(new Event('blur', { bubbles: true }));
+                        }
+                    }
+                    this.closeLightbox();
+                },
+
+                // Timer
+                timerRunning: false,
+                timerInterval: null,
+                timerStartedAt: null,
+                displayElapsed: 0,
+
+                // Computed
+                get activeTask() {
+                    return this.tasks.find(t => t.id === this.activeTaskId) || null;
+                },
+                get activeNote() {
+                    return this.notes.find(n => n.id === this.activeNoteId) || null;
+                },
+                get currentDateStr() {
+                    return new Date().toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+                },
+
+                // Init
+                async init() {
+                    await this.initDB();
+                    await this.load();
+                    this.restoreTimer();
+                },
+
+                // IndexedDB System
+                initDB() {
+                    return new Promise((resolve, reject) => {
+                        const request = indexedDB.open('FocusFlowDB', 1);
+                        request.onupgradeneeded = (e) => {
+                            const db = e.target.result;
+                            if (!db.objectStoreNames.contains('workspace')) {
+                                db.createObjectStore('workspace');
+                            }
+                        };
+                        request.onsuccess = (e) => {
+                            this.db = e.target.result;
+                            this.dbReady = true;
+                            resolve();
+                        };
+                        request.onerror = (e) => {
+                            console.error('FocusFlow DB Error:', e);
+                            reject(e);
+                        };
+                    });
+                },
+                async getDBData(key) {
+                    if (!this.db) return null;
+                    return new Promise((resolve, reject) => {
+                        const transaction = this.db.transaction(['workspace'], 'readonly');
+                        const store = transaction.objectStore('workspace');
+                        const request = store.get(key);
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    });
+                },
+                async setDBData(key, value) {
+                    if (!this.db) return;
+                    return new Promise((resolve, reject) => {
+                        const transaction = this.db.transaction(['workspace'], 'readwrite');
+                        const store = transaction.objectStore('workspace');
+                        const request = store.put(value, key);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                },
+
+                // Persistence
+                async load() {
+                    try {
+                        let data = await this.getDBData('main');
+                        
+                        // Migration from localStorage
+                        if (!data) {
+                            const raw = localStorage.getItem('focusflow');
+                            if (raw) {
+                                data = JSON.parse(raw);
+                                await this.setDBData('main', data);
+                                console.log('[FocusFlow] Migrated data to IndexedDB');
+                            }
+                        }
+                        
+                        if (!data) return;
+
+                        // Tasks
+                        this.tasks = (data.tasks || []).map(t => ({
+                            ...t,
+                            status: t.status || (t.completed ? 'done' : 'todo'),
+                            subtasks: t.subtasks || [],
+                            attachments: t.attachments || [],
+                        }));
+
+                        // Notes Migration (String -> Array)
+                        this.notes = (data.notes || []).map(n => ({
+                            ...n,
+                            attachments: n.attachments || []
+                        }));
+                        if (data.globalNotes && typeof data.globalNotes === 'string' && data.globalNotes.trim().length > 0) {
+                            if (this.notes.length === 0) {
+                                this.notes.push({
+                                    id: Date.now(),
+                                    title: 'Quick Note',
+                                    content: data.globalNotes,
+                                    updatedAt: new Date().toISOString(),
+                                    attachments: []
+                                });
+                            }
+                        }
+
+                        // Patch legacy images in notes to render correctly without being crushed by Tailwind defaults
+                        const fixImages = (text) => {
+                             if(!text) return text;
+                             return text.replace(/<img(.*?)>/g, (match, attrs) => {
+                                 if(!attrs.includes('style=')) {
+                                     return `<img${attrs} style="max-width:100%; max-height:400px; display:inline-block; vertical-align: bottom;">`;
+                                 }
+                                 return match;
+                             });
+                        };
+                        
+                        this.tasks.forEach(t => { t.notes = fixImages(t.notes); });
+                        this.notes.forEach(n => { n.content = fixImages(n.content); });
+
+                        this.activeTaskId = data.activeTaskId || null;
+                        this.timerMode = data.timerMode || 'manual';
+                        this.pomoSession = data.pomoSession || 'focus';
+                        this.pomoTimeLeft = data.pomoTimeLeft || (25 * 60);
+                    } catch (e) {
+                        console.warn('[FocusFlow] Load failed:', e);
+                    }
+                },
+                save() {
+                    // Deep clone to strip Alpine Proxies which block IndexedDB saving
+                    let cleanTasks = [];
+                    let cleanNotes = [];
+                    try {
+                        cleanTasks = JSON.parse(JSON.stringify(this.tasks));
+                        cleanNotes = JSON.parse(JSON.stringify(this.notes));
+                    } catch(e) {
+                         console.error("Failed to clone for DB", e);
+                         return;
+                    }
+
+                    const data = {
+                        tasks: cleanTasks,
+                        notes: cleanNotes,
+                        activeTaskId: this.activeTaskId,
+                        timerMode: this.timerMode,
+                        pomoSession: this.pomoSession,
+                        pomoTimeLeft: this.pomoTimeLeft,
+                    };
+                    return this.setDBData('main', data).then(() => {
+                        // After successful save to DB, we should also clear the old localStorage limit to avoid reloading it if DB fails later!
+                        if(localStorage.getItem('focusflow')) {
+                            localStorage.removeItem('focusflow');
+                        }
+                    }).catch(e => console.error("IndexedDB Save Error:", e));
+                },
+
+                // Note Actions
+                addNote() {
+                    const id = Date.now();
+                    this.notes.unshift({
+                        id,
+                        title: 'New Note',
+                        content: '',
+                        updatedAt: new Date().toISOString(),
+                        attachments: [],
+                    });
+                    this.activeNoteId = id;
+                    this.save();
+                    // Focus title after DOM update
+                    this.$nextTick(() => {
+                        document.getElementById('note-title-input')?.focus();
+                    });
+                },
+                deleteNote(id) {
+                    if (confirm('Delete this note?')) {
+                        this.notes = this.notes.filter(n => n.id !== id);
+                        if (this.activeNoteId === id) this.activeNoteId = null;
+                        this.save();
+                    }
+                },
+
+                // Portability
+                exportData() {
+                    const data = JSON.stringify({
+                        tasks: this.tasks,
+                        notes: this.notes,
+                        timerMode: this.timerMode,
+                        version: "2.1"
+                    }, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `focusflow_backup_${this.toDateStr(new Date())}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                },
+                importData(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (!data.tasks) throw new Error("Invalid backup file");
+
+                            // Load data
+                            this.tasks = data.tasks;
+                            this.notes = data.notes || []; // Import modern notes structure
+                            this.timerMode = data.timerMode || 'manual';
+
+                            await this.save();
+                            window.location.reload(); // Refresh to clean state
+                        } catch (err) {
+                            alert("Import failed: " + err.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                },
+
+                // Timer persistence
+                restoreTimer() {
+                    try {
+                        const ts = localStorage.getItem('focusflow_timer');
+                        if (!ts) return;
+                        const state = JSON.parse(ts);
+                        if (state.taskId !== this.activeTaskId) return;
+                        if (state.running && state.startedAt) {
+                            const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
+                            const task = this.tasks.find(t => t.id === this.activeTaskId);
+                            if (task) { task.elapsedTime = (task.elapsedTime || 0) + elapsed; this.save(); }
+                            this.displayElapsed = task ? task.elapsedTime : 0;
+                            this.startTimerInterval();
+                        } else {
+                            this.displayElapsed = this.activeTask ? (this.activeTask.elapsedTime || 0) : 0;
+                        }
+                    } catch (e) { }
+                },
+                saveTimerState() {
+                    localStorage.setItem('focusflow_timer', JSON.stringify({
+                        taskId: this.activeTaskId,
+                        running: this.timerRunning,
+                        startedAt: this.timerRunning ? this.timerStartedAt : null,
+                    }));
+                },
+
+                // Task operations
+                addTask() {
+                    const title = this.newTaskTitle.trim();
+                    if (!title) return;
+                    const task = {
+                        id: Date.now(),
+                        title,
+                        notes: '',
+                        elapsedTime: 0,
+                        createdAt: this.toDateStr(new Date()),
+                        status: 'todo',
+                        subtasks: [],
+                        attachments: [],
+                    };
+                    this.tasks.unshift(task);
+                    this.newTaskTitle = '';
+                    this.save();
+                    this.setActive(task.id);
+                },
+                deleteTask(id) {
+                    if (this.activeTaskId === id) {
+                        this.stopTimer();
+                        this.activeTaskId = null;
+                        this.displayElapsed = 0;
+                        this.saveTimerState();
+                    }
+                    this.tasks = this.tasks.filter(t => t.id !== id);
+                    this.save();
+                },
+                setStatus(id, status) {
+                    const task = this.tasks.find(t => t.id === id);
+                    if (!task) return;
+
+                    // Validation: Prevent 'done' if subtasks are lingering
+                    if (status === 'done' && task.subtasks && task.subtasks.some(s => !s.done)) {
+                        alert(`Cannot complete task: "${task.title}" has pending subtasks.`);
+                        return;
+                    }
+
+                    task.status = status;
+                    // Stop timer when moving active task away from in-progress (to todo or done)
+                    if (status !== 'inprogress' && this.activeTaskId === id) {
+                        this.stopTimer();
+                        this.saveTimerState();
+                    }
+                    this.save();
+                },
+                setActive(id) {
+                    if (this.activeTaskId === id) return;
+                    this.stopTimer();
+                    this.activeTaskId = id;
+                    const task = this.tasks.find(t => t.id === id);
+                    this.displayElapsed = task ? (task.elapsedTime || 0) : 0;
+                    this.save();
+                    this.saveTimerState();
+                },
+
+                // Timer
+                toggleTimer() {
+                    if (this.timerRunning) { this.stopTimer(); }
+                    else { this.startTimerInterval(); }
+                    this.saveTimerState();
+                },
+                startTimerInterval() {
+                    if (this.timerRunning) return;
+                    this.timerRunning = true;
+                    this.timerStartedAt = Date.now();
+                    const base = this.displayElapsed;
+                    this.timerInterval = setInterval(() => {
+                        if (this.timerMode === 'manual') {
+                            const delta = Math.floor((Date.now() - this.timerStartedAt) / 1000);
+                            this.displayElapsed = base + delta;
+                            if (delta % 5 === 0) {
+                                const task = this.tasks.find(t => t.id === this.activeTaskId);
+                                if (task) { task.elapsedTime = this.displayElapsed; this.save(); }
+                            }
+                        } else {
+                            // Pomodoro logic
+                            this.pomoTimeLeft--;
+                            if (this.pomoSession === 'focus') {
+                                // Still track focus time even in pomo
+                                this.displayElapsed++;
+                                if (this.displayElapsed % 5 === 0) {
+                                    const task = this.tasks.find(t => t.id === this.activeTaskId);
+                                    if (task) { task.elapsedTime = this.displayElapsed; this.save(); }
+                                }
+                            }
+                            if (this.pomoTimeLeft <= 0) {
+                                this.stopTimer();
+                                this.switchPomoSession();
+                                // Alert user
+                                alert(this.pomoSession === 'break' ? 'Focus session complete! Time for a break.' : 'Break over! Back to focus.');
+                            }
+                        }
+                    }, 1000);
+                },
+                stopTimer() {
+                    if (!this.timerRunning) return;
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                    this.timerRunning = false;
+                    const task = this.tasks.find(t => t.id === this.activeTaskId);
+                    if (task) { task.elapsedTime = this.displayElapsed; this.save(); }
+                },
+                resetTimer() {
+                    this.stopTimer();
+                    if (this.timerMode === 'manual') {
+                        this.displayElapsed = 0;
+                        const task = this.tasks.find(t => t.id === this.activeTaskId);
+                        if (task) { task.elapsedTime = 0; this.save(); }
+                    } else {
+                        this.resetPomo();
+                    }
+                    this.saveTimerState();
+                },
+                resetPomo() {
+                    this.pomoSession = 'focus';
+                    this.pomoTimeLeft = 25 * 60;
+                    this.save();
+                },
+                switchPomoSession() {
+                    if (this.pomoSession === 'focus') {
+                        this.pomoSession = 'break';
+                        this.pomoTimeLeft = 5 * 60;
+                    } else {
+                        this.pomoSession = 'focus';
+                        this.pomoTimeLeft = 25 * 60;
+                    }
+                    this.save();
+                },
+
+                // Subtasks
+                addSubtask(taskId) {
+                    const text = this.newSubtaskText.trim();
+                    if (!text) return;
+                    const task = this.tasks.find(t => t.id === taskId);
+                    if (!task) return;
+                    if (!task.subtasks) task.subtasks = [];
+                    task.subtasks.push({ id: Date.now(), text, done: false });
+                    this.newSubtaskText = '';
+                    this.save();
+                },
+                toggleSubtask(taskId, subId) {
+                    const task = this.tasks.find(t => t.id === taskId);
+                    if (!task) return;
+                    const sub = task.subtasks.find(s => s.id === subId);
+                    if (sub) { sub.done = !sub.done; this.save(); }
+                },
+                deleteSubtask(taskId, subId) {
+                    const task = this.tasks.find(t => t.id === taskId);
+                    if (!task) return;
+                    task.subtasks = task.subtasks.filter(s => s.id !== subId);
+                    this.save();
+                },
+
+                // Notes
+                onTaskNotesInput() {
+                    this.save();
+                    this.notesSaved = true;
+                    clearTimeout(this.notesSavedTimer);
+                    this.notesSavedTimer = setTimeout(() => { this.notesSaved = false; }, 1500);
+                },
+
+                // File Attachments
+                formatBytes(bytes) {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024, dm = 2, sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+                },
+                async handleFileDrop(event, targetType, targetId) {
+                    if (targetType === 'task') this.isDraggingTaskFile = false;
+                    if (targetType === 'note') this.isDraggingNoteFile = false;
+                    
+                    const files = event.dataTransfer.files;
+                    if (!files || files.length === 0) return;
+
+                    // Capture insertion range before async operations
+                    let dropRange = null;
+                    if (document.caretRangeFromPoint) {
+                        dropRange = document.caretRangeFromPoint(event.clientX, event.clientY);
+                    } else if (event.rangeParent) {
+                        dropRange = document.createRange();
+                        dropRange.setStart(event.rangeParent, event.rangeOffset);
+                    }
+
+                    
+                    for (const file of files) {
+                        try {
+                            if (file.size > 5 * 1024 * 1024) {
+                                alert(`File "` + file.name + `" exceeds 5MB limit.`);
+                                continue;
+                            }
+                            
+                            const base64 = await this.readAsBase64(file);
+                            let wrapper = document.createElement('span');
+                            wrapper.contentEditable = "false";
+                            wrapper.className = "inline-attachment";
+                            wrapper.id = "attach-" + Date.now() + Math.random().toString(36).substr(2, 5);
+                            wrapper.style.cssText = "display:inline-block; position:relative; margin: 0 4px; max-width:100%; vertical-align: bottom;";
+
+                            if (file.type.startsWith('image/')) {
+                                let img = document.createElement('img');
+                                img.src = base64;
+                                img.style.cssText = "max-width:100%; max-height:400px; border-radius:8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display:inline-block;";
+                                img.title = "Double-click to open " + file.name;
+                                wrapper.appendChild(img);
+                            } else {
+                                let a = document.createElement('a');
+                                a.href = base64;
+                                a.download = file.name;
+                                a.className = "attachment-file";
+                                a.style.cssText = "display:inline-flex; align-items:center; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius:8px; color:#aaa; text-decoration:none; transition: background 0.2s;";
+                                a.innerHTML = `📄 <span style="font-weight:600; color:#ddd;">${file.name}</span> <span style="font-size:10px;">(${this.formatBytes(file.size)})</span>`;
+                                wrapper.appendChild(a);
+                            }
+
+                            // Insert into DOM at drop range using DocumentFragment to preserve order
+                            let inserted = false;
+                            const frag = document.createDocumentFragment();
+                            frag.appendChild(document.createTextNode('\u200B')); // Zero-width space before
+                            frag.appendChild(wrapper);
+                            frag.appendChild(document.createTextNode('\u200B')); // Zero-width space for cursor selection
+
+                            if (dropRange) {
+                                dropRange.insertNode(frag);
+                                dropRange.collapse(false);
+                                inserted = true;
+                            } else {
+                                // Fallback to append if no range
+                                const areaInfo = targetType === 'task' ? document.getElementById('task-notes-area') : document.getElementById('note-content-area');
+                                if (areaInfo) {
+                                    areaInfo.appendChild(frag);
+                                    inserted = true;
+                                }
+                            }
+                            // Sync back to Alpine state
+                            if (inserted) {
+                                if (targetType === 'task') {
+                                    const task = this.tasks.find(t => t.id === targetId);
+                                    if (task) {
+                                        task.notes = document.getElementById('task-notes-area').innerHTML;
+                                        this.onTaskNotesInput(); // triggers visual save indicator
+                                    }
+                                } else if (targetType === 'note') {
+                                    const note = this.notes.find(n => n.id === targetId);
+                                    if (note) {
+                                        note.content = document.getElementById('note-content-area').innerHTML;
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Error reading file", e);
+                            alert(`Failed to attach "` + file.name + `"`);
+                        }
+                    }
+                    this.save();
+                },
+                readAsBase64(file) {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(file);
+                    });
+                },
+
+
+                // Utilities
+                toDateStr(date) {
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                },
+                formatTime(seconds) {
+                    const s = Math.max(0, Math.floor(seconds));
+                    return `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+                },
+            };
+        }
+    </script>
+</body>
+
+</html>

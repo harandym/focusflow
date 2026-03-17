@@ -1,0 +1,6 @@
+# Ignore data files and backups
+prod data/
+temp/
+*.json
+!manifest.json
+.DS_Store
