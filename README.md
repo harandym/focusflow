@@ -34,3 +34,8 @@ No backend servers. No cloud storage.
 3. Start adding tasks, dragging files, and taking control of your focus!
 
 *Built with HTML5, Alpine.js, Tailwind CSS, and PeerJS.*
+
+---
+
+## 🤖 Development Philosophy
+This project is an exploration into fully **"vibe coding"** an entire functional web application. It was built with heavy AI assistance, focusing intensely on achieving a flow state, experimenting with rapid iteration, and translating ideas directly into live features without being bogged down by traditional scaffolding. It stands as a testament to how fast an idea can go from a single prompt to a fully deployed Progressive Web App with complex offline peer-to-peer data synchronization!
