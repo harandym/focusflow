@@ -17,6 +17,7 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f0f'/><text y='.9em' font-size='80' x='10'>🎯</text></svg>">
     <script src="./tailwind.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -772,9 +773,12 @@
                                                 </button>
                                             </template>
                                             <template x-if="myPeerId">
-                                                <div class="text-center">
-                                                    <div class="text-[10px] text-gray-500 mb-1">Your ID:</div>
-                                                    <div class="font-mono text-accent bg-surface-900 py-1.5 rounded border border-surface-600 select-all" x-text="myPeerId"></div>
+                                                <div class="flex flex-col items-center gap-2">
+                                                    <div id="sync-qrcode" class="p-1 bg-accent rounded"></div>
+                                                    <div class="w-full text-center">
+                                                        <div class="text-[10px] text-gray-500 mb-0.5">Or paste this ID:</div>
+                                                        <div class="font-mono text-accent text-[10px] bg-surface-900 py-1 px-2 rounded border border-surface-600 select-all overflow-hidden text-ellipsis whitespace-nowrap" x-text="myPeerId"></div>
+                                                    </div>
                                                 </div>
                                             </template>
                                         </div>
@@ -1082,6 +1086,18 @@
                     await this.initDB();
                     await this.load();
                     this.restoreTimer();
+                    
+                    // Check for QR Code deep-link sync param
+                    const params = new URLSearchParams(window.location.search);
+                    const syncId = params.get('sync');
+                    if (syncId) {
+                        this.targetPeerId = syncId;
+                        this.showStats = true; // Open Control Center
+                        setTimeout(() => {
+                            this.connectToPeer();
+                            window.history.replaceState({}, document.title, window.location.pathname); // clear URL
+                        }, 500);
+                    }
                 },
 
                 // IndexedDB System
@@ -1595,6 +1611,23 @@
                     peer.on('open', (id) => {
                         this.myPeerId = id;
                         this.syncRole = 'host';
+                        
+                        // Generate QR Code logic delayed slightly for DOM update
+                        setTimeout(() => {
+                            const qrContainer = document.getElementById("sync-qrcode");
+                            if (qrContainer) {
+                                qrContainer.innerHTML = "";
+                                const syncUrl = window.location.origin + window.location.pathname + "?sync=" + id;
+                                new QRCode(qrContainer, {
+                                    text: syncUrl,
+                                    width: 128,
+                                    height: 128,
+                                    colorDark : "#0a0a0a",
+                                    colorLight : "#10b981", 
+                                    correctLevel : QRCode.CorrectLevel.L
+                                });
+                            }
+                        }, 50);
                     });
                     peer.on('connection', (conn) => {
                         this.setupConnection(conn, 'host');
