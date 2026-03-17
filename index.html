@@ -683,7 +683,7 @@
                         class="text-gray-500 hover:text-white transition-colors">✕</button>
                 </div>
                 <!-- Tabs / Sections -->
-                <div class="p-6 flex flex-col gap-6">
+                <div class="p-6 flex flex-col gap-6 overflow-y-auto max-h-[70vh]">
 
                     <!-- Analytics Section -->
                     <div class="flex flex-col gap-4">
@@ -746,6 +746,18 @@
                         </div>
                         <div x-show="restoreConfirm" class="text-[9px] text-red-400 text-center animate-pulse">
                             ⚠️ Warning: Importing will overwrite your current workspace!
+                        </div>
+                        <div class="relative mt-1">
+                            <button @click="clearDBConfirm = !clearDBConfirm"
+                                class="btn w-full flex items-center justify-center gap-2 bg-surface-800 hover:bg-red-900/20 border border-surface-600 hover:border-red-500/50 p-2 rounded-lg transition-all"
+                                :class="clearDBConfirm ? 'border-red-500 bg-red-900/30 text-white' : ''">
+                                <span class="text-sm">🗑️</span>
+                                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-tight" x-text="clearDBConfirm ? 'Confirm Clear All Data?' : 'Clear Database'"></div>
+                            </button>
+                            <div x-show="clearDBConfirm" class="mt-2 flex gap-2 animate-slide-in">
+                                <button @click="clearDatabase()" class="flex-1 bg-red-600 hover:bg-red-500 text-white text-[10px] uppercase tracking-widest font-bold py-1.5 rounded transition-colors shadow">YES, DELETE EVERYTHING</button>
+                                <button @click="clearDBConfirm = false" class="flex-1 bg-surface-600 hover:bg-surface-500 text-gray-300 text-[10px] uppercase tracking-widest font-bold py-1.5 rounded transition-colors">CANCEL</button>
+                            </div>
                         </div>
                     </div>
 
@@ -968,7 +980,7 @@
                 newSubtaskText: '',
                 notesSavedTimer: null,
                 draggedTaskId: null,
-                showStats: false,
+                showStats: false, clearDBConfirm: false,
                 restoreConfirm: false,
                 timerMode: 'manual',
                 pomoSession: 'focus',
@@ -1302,6 +1314,17 @@
                         }
                     };
                     reader.readAsText(file);
+                },
+                async clearDatabase() {
+                    const req = indexedDB.deleteDatabase('FocusFlowDB');
+                    req.onsuccess = () => {
+                        localStorage.removeItem('focusflow');
+                        localStorage.removeItem('focusflow_timer');
+                        window.location.reload();
+                    };
+                    req.onerror = () => {
+                        alert("Failed to clear database.");
+                    };
                 },
 
                 // Timer persistence
@@ -1659,6 +1682,14 @@
                         this.setupConnection(conn, 'client');
                     }
                     this.syncStatus = 'connecting';
+                    
+                    // Connection timeout handler
+                    setTimeout(() => {
+                        if (this.syncStatus === 'connecting') {
+                            alert("Sync connection timed out. Please ensure the Host tab is open and the ID is correct.");
+                            this.disconnectPeer();
+                        }
+                    }, 10000); // 10 seconds timeout
                 },
                 setupConnection(conn, role) {
                     this.peerConnection = conn;
