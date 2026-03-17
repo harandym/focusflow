@@ -1669,7 +1669,7 @@
                         peer.on('open', (id) => {
                             this.myPeerId = id;
                             window._peerServer = peer;
-                            const conn = peer.connect(this.targetPeerId);
+                            const conn = peer.connect(this.targetPeerId, { reliable: true });
                             this.setupConnection(conn, 'client');
                         });
                         peer.on('error', (err) => {
@@ -1678,7 +1678,7 @@
                             this.syncStatus = 'disconnected';
                         });
                     } else {
-                        const conn = window._peerServer.connect(this.targetPeerId);
+                        const conn = window._peerServer.connect(this.targetPeerId, { reliable: true });
                         this.setupConnection(conn, 'client');
                     }
                     this.syncStatus = 'connecting';
@@ -1691,15 +1691,26 @@
                     // Connection timeout handler
                     setTimeout(() => {
                         if (this.syncStatus === 'connecting') {
-                            alert("Sync connection timed out. Please ensure both devices are ready.");
+                            alert("Sync connection timed out. If testing locally, ensure you are using HTTPS (like GitHub Pages). Local HTTP networks block WebRTC direct connections.");
                             this.disconnectPeer();
                         }
-                    }, 10000); // 10 seconds timeout
+                    }, 12000); // 12 seconds timeout
                     
-                    conn.on('open', () => {
+                    conn.on('error', (err) => {
+                        console.error('Peer DataConnection Error:', err);
+                        this.disconnectPeer();
+                        alert("Sync data channel error: " + err);
+                    });
+                    
+                    if (conn.open) {
                         this.syncStatus = 'connected';
                         this.sendMetadata();
-                    });
+                    } else {
+                        conn.on('open', () => {
+                            this.syncStatus = 'connected';
+                            this.sendMetadata();
+                        });
+                    }
                     
                     conn.on('data', async (data) => {
                         if(data.type === 'metadata') {
