@@ -1627,10 +1627,21 @@
                 },
 
 
-                // --- WebRTC Sync System ---
+                getPeerConfig() {
+                    return {
+                        config: {
+                            'iceServers': [
+                                { urls: 'stun:stun.l.google.com:19302' },
+                                { urls: 'stun:stun1.l.google.com:19302' },
+                                { urls: 'stun:stun2.l.google.com:19302' },
+                                { urls: 'stun:stun.services.mozilla.com' }
+                            ]
+                        }
+                    };
+                },
                 initPeer() {
                     if(this.myPeerId) return; // Already init
-                    const peer = new Peer();
+                    const peer = new Peer(this.getPeerConfig());
                     peer.on('open', (id) => {
                         this.myPeerId = id;
                         this.syncRole = 'host';
@@ -1665,11 +1676,11 @@
                 connectToPeer() {
                     if(!this.targetPeerId) return;
                     if(!window._peerServer) {
-                        const peer = new Peer();
+                        const peer = new Peer(this.getPeerConfig());
                         peer.on('open', (id) => {
                             this.myPeerId = id;
                             window._peerServer = peer;
-                            const conn = peer.connect(this.targetPeerId, { reliable: true });
+                            const conn = peer.connect(this.targetPeerId);
                             this.setupConnection(conn, 'client');
                         });
                         peer.on('error', (err) => {
@@ -1678,7 +1689,7 @@
                             this.syncStatus = 'disconnected';
                         });
                     } else {
-                        const conn = window._peerServer.connect(this.targetPeerId, { reliable: true });
+                        const conn = window._peerServer.connect(this.targetPeerId);
                         this.setupConnection(conn, 'client');
                     }
                     this.syncStatus = 'connecting';
@@ -1691,7 +1702,7 @@
                     // Connection timeout handler
                     setTimeout(() => {
                         if (this.syncStatus === 'connecting') {
-                            alert("Sync connection timed out. If testing locally, ensure you are using HTTPS (like GitHub Pages). Local HTTP networks block WebRTC direct connections.");
+                            alert("Sync connection timed out. A strict firewall or cellular network NAT is blocking the WebRTC connection.");
                             this.disconnectPeer();
                         }
                     }, 12000); // 12 seconds timeout
