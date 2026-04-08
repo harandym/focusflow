@@ -250,11 +250,11 @@
             <!-- Kanban columns scroll area -->
             <div class="flex-1 overflow-hidden p-3 flex flex-col gap-3">
 
-                <!-- ── TO DO -->
+                <!-- ── INACTIVE TASKS -->
                 <div class="kanban-col flex-1 min-h-0">
                     <div class="kanban-col-header text-gray-500">
                         <span class="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block"></span>
-                        To Do
+                        Inactive Tasks
                         <span class="ml-auto text-gray-600" x-text="tasks.filter(t=>t.status==='todo').length"></span>
                     </div>
                     <div class="kanban-col-body" @dragover.prevent="$el.classList.add('drag-over')"
@@ -298,11 +298,11 @@
                     </div>
                 </div>
 
-                <!-- ── IN PROGRESS -->
+                <!-- ── ACTIVE TASKS -->
                 <div class="kanban-col flex-1 min-h-0">
                     <div class="kanban-col-header text-yellow-600">
                         <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block animate-pulse-slow"></span>
-                        In Progress
+                        Active Tasks
                         <span class="ml-auto text-gray-600"
                             x-text="tasks.filter(t=>t.status==='inprogress').length"></span>
                     </div>
